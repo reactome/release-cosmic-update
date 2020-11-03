@@ -35,95 +35,7 @@ public class Main extends ReleaseStep
 	private static final String COSMIC_MUTANT_EXPORT = "./CosmicMutantExport.tsv";
 	private static final String COSMIC_FUSION_EXPORT = "./CosmicFusionExport.tsv";
 	private static final String COSMIC_MUTATION_TRACKING = "./CosmicMutationTracking.tsv";
-	/*
-	// Need to track: Old identifiers, suggested prefix (if applicable), validity, DB ID of Identifier object (and referrer(s) ?)
-	private class COSMICIdentifierUpdateRecord implements Comparable<COSMICIdentifierUpdateRecord>
-	{
-		// This is so ugly... I wish we could move to a newer version of Java that has Records!
-		private String identifier;
-		private Long dbID;
-		private String suggestedPrefix;
-		private boolean valid;
-		private Set<String> mutationIDs = new HashSet<>();
-		private String cosvIdentifier;
-		
-		public String getIdentifier()
-		{
-			return identifier;
-		}
-		public void setIdentifier(String identifier)
-		{
-			this.identifier = identifier;
-		}
-		public Long getDbID()
-		{
-			return dbID;
-		}
-		public void setDbID(Long dbID)
-		{
-			this.dbID = dbID;
-		}
-		public String getSuggestedPrefix()
-		{
-			return suggestedPrefix;
-		}
-		public void setSuggestedPrefix(String suggestedPrefix)
-		{
-			this.suggestedPrefix = suggestedPrefix;
-		}
-		public boolean isValid()
-		{
-			return valid;
-		}
-		public void setValid(boolean valid)
-		{
-			this.valid = valid;
-		}
-		public Set<String> getMutationIDs()
-		{
-			return mutationIDs;
-		}
-		public void setMutationIDs(Set<String> mutationIDs)
-		{
-			this.mutationIDs = mutationIDs;
-		}
-		public String getCosvIdentifier()
-		{
-			return cosvIdentifier;
-		}
-		public void setCosvIdentifier(String cosvIdentifier)
-		{
-			this.cosvIdentifier = cosvIdentifier;
-		}
-		@Override
-		public String toString()
-		{
-			return "[" + this.getDbID() + "; " 
-						+ this.getIdentifier()+ "; "
-						+ this.getSuggestedPrefix() + "; "
-						+ this.isValid() + "; "
-						+ this.getCosvIdentifier() + "; ("
-						+ this.getMutationIDs().stream().reduce("", (s, t) -> s + t + ",") + ")" + "]";
-		}
-		@Override
-		public int compareTo(COSMICIdentifierUpdateRecord arg0)
-		{
-			if (arg0.valid && !this.valid)
-			{
-				return -1;
-			}
-			if (!arg0.valid && this.valid)
-			{
-				return 1;
-			}
-			if (arg0.valid == this.valid)
-			{
-				return this.identifier.compareTo(arg0.identifier);
-			}
-			return 0;
-		}
-	}
-	*/
+
 	private static final Logger logger = LogManager.getLogger();
 	private static long creatorID;
 	public static void main(String... args)
@@ -150,10 +62,7 @@ public class Main extends ReleaseStep
 				return false;
 			}).collect(Collectors.toList());
 			logger.info("{} filtered COSMIC identifiers", filteredCosmicObjects.size());
-			// Build a structure that lets us lookup database objects by their COSMIC identifier.
-//			Map<String, Long> oldIdentifierToDBIDMap = new HashMap<String, Long>();
-//			Set<String> suggestedIdentifiers = new HashSet<String>();
-//			Set<String[]> identifiersWithNewPrefixes = new HashSet<>();
+
 			Main cosmicUpdater = new Main();
 			Map<String, COSMICIdentifierUpdater> updates = cosmicUpdater.determinePrefixes(filteredCosmicObjects/* , oldIdentifierToDBIDMap, suggestedIdentifiers, identifiersWithNewPrefixes */);
 			
@@ -172,53 +81,6 @@ public class Main extends ReleaseStep
 		
 	}
 
-//	private static void updateIdentifiers(MySQLAdaptor adaptor, Map<String, COSMICIdentifierUpdateRecord> updates) throws Exception, InvalidAttributeException, InvalidAttributeValueException
-//	{
-//		GKInstance updateWithNewCOSV = InstanceEditUtils.createDefaultIE(adaptor, 8939149L, true, "Identifier was automatically updated to new \"COSV\" identifier by COSMIC Update process.");
-//		GKInstance updatePrependCOSM = InstanceEditUtils.createDefaultIE(adaptor, 8939149L, true, "Identifier was automatically prepended with \"COSM\" by COSMIC Update process.");
-//		int cosmPrependCount = 0;
-//		int cosvUpdateCount = 0;
-//		// At this point, we should be able to replace COSM identifiers with COSV identifiers - if there _is_ one. If not, do nothing!
-//		logger.info("Now updating identifiers...");
-//		for (COSMICIdentifierUpdateRecord record : updates.values())
-//		{
-//			if (record.getCosvIdentifier() != null && !record.getCosvIdentifier().isEmpty())
-//			{
-//				GKInstance identifierObject = adaptor.fetchInstance( record.getDbID());
-//				identifierObject.setAttributeValue(ReactomeJavaConstants.identifier, record.getCosvIdentifier());
-//				
-//				updateIdentifierObject(adaptor, updateWithNewCOSV, identifierObject);
-//				cosvUpdateCount++;
-//			}
-//			else if (record.getSuggestedPrefix() != null && record.getSuggestedPrefix().toUpperCase().equals("COSM"))
-//			{
-//				GKInstance identifierObject = adaptor.fetchInstance( record.getDbID());
-//				String currentIdentifier = (String) identifierObject.getAttributeValue(ReactomeJavaConstants.identifier);
-//				if (!currentIdentifier.toUpperCase().startsWith("C"))
-//				{
-//					identifierObject.setAttributeValue(ReactomeJavaConstants.identifier, record.getSuggestedPrefix() + currentIdentifier);
-//					updateIdentifierObject(adaptor, updatePrependCOSM, identifierObject);
-//					cosmPrependCount++;
-//				}
-//			}
-//			else
-//			{
-//				logger.info("No suggested prefix OR corresponding COSV identifier for {} (DBID: {}) - identifier will not be updated.", record.getIdentifier(), record.getDbID());
-//			}
-//		}
-//		// cleanup - delete the instance edits if unused.
-//		if (cosmPrependCount == 0)
-//		{
-//			logger.info("No identifiers were prepended with \"COSM\"");
-//			adaptor.deleteByDBID(updatePrependCOSM.getDBID());
-//		}
-//		if (cosvUpdateCount == 0)
-//		{
-//			logger.info("No identifiers were updated to \"COSV\" identifiers");
-//			adaptor.deleteByDBID(updateWithNewCOSV.getDBID());
-//		}
-//	}
-
 	private static void updateIdentifiers(MySQLAdaptor adaptor, Map<String, COSMICIdentifierUpdater> updates)
 	{
 		for (COSMICIdentifierUpdater updator : updates.values())
@@ -234,20 +96,6 @@ public class Main extends ReleaseStep
 		}		
 	}
 
-	//	private static void updateIdentifierObject(MySQLAdaptor adaptor, GKInstance modifiedForCOSMICUpdate,
-//			GKInstance identifierObject) throws InvalidAttributeException, Exception, InvalidAttributeValueException {
-//		List<GKInstance> modifications = identifierObject.getAttributeValuesList(ReactomeJavaConstants.modified);
-//
-//		modifications.add(modifiedForCOSMICUpdate);
-//		identifierObject.setAttributeValue(ReactomeJavaConstants.modified, modifications);
-//		
-//		String newDisplayName = InstanceDisplayNameGenerator.generateDisplayName(identifierObject);
-//		identifierObject.setAttributeValue(ReactomeJavaConstants._displayName, newDisplayName);
-//		adaptor.updateInstanceAttribute(identifierObject, ReactomeJavaConstants.identifier);
-//		adaptor.updateInstanceAttribute(identifierObject, ReactomeJavaConstants.modified);
-//		adaptor.updateInstanceAttribute(identifierObject, ReactomeJavaConstants._displayName);
-//	}
-//
 	private static void printIdentifierUpdateReport(Map<String, COSMICIdentifierUpdater> updates) throws IOException
 	{
 		try(CSVPrinter printer = new CSVPrinter(new FileWriter("./valid-identifiers.csv"), CSVFormat.DEFAULT.withHeader("DB_ID", "Identifier", "Suggested Prefix", "Valid?", "COSV identifier", "Mutation IDs")))
