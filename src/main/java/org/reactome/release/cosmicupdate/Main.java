@@ -4,6 +4,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.Reader;
 import java.sql.SQLException;
 import java.util.Collection;
 import java.util.HashMap;
@@ -32,6 +33,7 @@ import org.reactome.release.common.database.InstanceEditUtils;
 
 public class Main extends ReleaseStep
 {
+	// TODO: Move file path values to config file.
 	private static final String COSMIC_MUTANT_EXPORT = "./CosmicMutantExport.tsv";
 	private static final String COSMIC_FUSION_EXPORT = "./CosmicFusionExport.tsv";
 	private static final String COSMIC_MUTATION_TRACKING = "./CosmicMutationTracking.tsv";
@@ -42,33 +44,13 @@ public class Main extends ReleaseStep
 	{
 		try
 		{
-			MySQLAdaptor adaptor = new MySQLAdaptor("localhost", "gk_central", "root", "root");
-			Collection<GKInstance> cosmicObjects = getCOSMICIdentifiers(adaptor);
-			logger.info("{} COSMIC identifiers", cosmicObjects.size());
-			// Filter the identifiers to exclude the COSV prefixes. 
-			List<GKInstance> filteredCosmicObjects = cosmicObjects.parallelStream().filter(inst -> {
-				try
-				{
-					return !((String)inst.getAttributeValue(ReactomeJavaConstants.identifier)).toUpperCase().startsWith("COSV");
-				}
-				catch (InvalidAttributeException e)
-				{
-					e.printStackTrace();
-				}
-				catch (Exception e)
-				{
-					e.printStackTrace();
-				}
-				return false;
-			}).collect(Collectors.toList());
-			logger.info("{} filtered COSMIC identifiers", filteredCosmicObjects.size());
-
-			Main cosmicUpdater = new Main();
-			Map<String, COSMICIdentifierUpdater> updates = cosmicUpdater.determinePrefixes(filteredCosmicObjects);
-			
-			validateIdentifiersAgainstFiles(updates);
-			printIdentifierUpdateReport(updates);
-			updateIdentifiers(adaptor, updates);
+			try(Reader configReader = new FileReader("config.properties"))
+			{
+				Properties props = new Properties();
+				props.load(configReader);
+				Main cosmicUpdateStep = new Main();
+				cosmicUpdateStep.executeStep(props);
+			}
 		}
 		catch (SQLException e)
 		{
@@ -257,8 +239,35 @@ public class Main extends ReleaseStep
 	}
 
 	@Override
-	public void executeStep(Properties props) throws Exception {
-		// TODO Auto-generated method stub
+	public void executeStep(Properties props) throws Exception
+	{
+		MySQLAdaptor adaptor = new MySQLAdaptor("localhost", "gk_central", "root", "root");
+		Collection<GKInstance> cosmicObjects = getCOSMICIdentifiers(adaptor);
+		logger.info("{} COSMIC identifiers", cosmicObjects.size());
+		// Filter the identifiers to exclude the COSV prefixes. 
+		List<GKInstance> filteredCosmicObjects = cosmicObjects.parallelStream().filter(inst -> {
+			try
+			{
+				return !((String)inst.getAttributeValue(ReactomeJavaConstants.identifier)).toUpperCase().startsWith("COSV");
+			}
+			catch (InvalidAttributeException e)
+			{
+				e.printStackTrace();
+			}
+			catch (Exception e)
+			{
+				e.printStackTrace();
+			}
+			return false;
+		}).collect(Collectors.toList());
+		logger.info("{} filtered COSMIC identifiers", filteredCosmicObjects.size());
+
+		Main cosmicUpdater = new Main();
+		Map<String, COSMICIdentifierUpdater> updates = cosmicUpdater.determinePrefixes(filteredCosmicObjects);
+		
+		validateIdentifiersAgainstFiles(updates);
+		printIdentifierUpdateReport(updates);
+		updateIdentifiers(adaptor, updates);
 		
 	}
 }
