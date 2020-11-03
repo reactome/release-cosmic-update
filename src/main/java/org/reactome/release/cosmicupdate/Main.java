@@ -64,7 +64,7 @@ public class Main extends ReleaseStep
 			logger.info("{} filtered COSMIC identifiers", filteredCosmicObjects.size());
 
 			Main cosmicUpdater = new Main();
-			Map<String, COSMICIdentifierUpdater> updates = cosmicUpdater.determinePrefixes(filteredCosmicObjects/* , oldIdentifierToDBIDMap, suggestedIdentifiers, identifiersWithNewPrefixes */);
+			Map<String, COSMICIdentifierUpdater> updates = cosmicUpdater.determinePrefixes(filteredCosmicObjects);
 			
 			validateIdentifiersAgainstFiles(updates);
 			printIdentifierUpdateReport(updates);
@@ -111,12 +111,7 @@ public class Main extends ReleaseStep
 	{
 		Set<String> fusionIDs = updates.keySet().parallelStream().filter(id -> id.toUpperCase().startsWith("COSF")).map(id -> id.toUpperCase().replaceAll("COSF","") ).collect(Collectors.toSet());
 		logger.info("Now checking with CosmicFusionExport.tsv...");
-		try(CSVParser parser = new CSVParser(new FileReader(COSMIC_FUSION_EXPORT), CSVFormat.DEFAULT.withFirstRecordAsHeader().withDelimiter('\t'));
-		/*
-		 * CSVPrinter printer = new CSVPrinter(new FileWriter("./cosf-mappings.csv"),
-		 * CSVFormat.DEFAULT.withHeader("DB_ID", "Legacy ID", "Mutation ID",
-		 * "Genomic ID") )
-		 */)
+		try(CSVParser parser = new CSVParser(new FileReader(COSMIC_FUSION_EXPORT), CSVFormat.DEFAULT.withFirstRecordAsHeader().withDelimiter('\t')); )
 		{
 			parser.forEach( record -> {
 				String fusionID = record.get("FUSION_ID");
@@ -129,8 +124,7 @@ public class Main extends ReleaseStep
 		
 		logger.info("Now checking with CosmicMutationTracking.tsv...");
 		// Now we need to look through the HUGE file from COSMIC and see if we can map the identifiers...
-		try(CSVParser parser = new CSVParser(new FileReader(COSMIC_MUTATION_TRACKING), CSVFormat.DEFAULT.withFirstRecordAsHeader().withDelimiter('\t'));
-			/*CSVPrinter printer = new CSVPrinter(new FileWriter("./mappings.csv"), CSVFormat.DEFAULT.withHeader("DB_ID", "Legacy ID", "Mutation ID", "Genomic ID") ) */)
+		try(CSVParser parser = new CSVParser(new FileReader(COSMIC_MUTATION_TRACKING), CSVFormat.DEFAULT.withFirstRecordAsHeader().withDelimiter('\t'));)
 		{
 			parser.forEach(record -> {
 				String legacyID = record.get("LEGACY_MUTATION_ID");
@@ -138,18 +132,8 @@ public class Main extends ReleaseStep
 				String genomicID = record.get("GENOMIC_MUTATION_ID");
 				if (updates.containsKey(legacyID))
 				{
-//						logger.info("Mutation ID: {} in Reactome has Legacty ID: {} and Genomic Mutation ID: {}", mutationID, legacyID, genomicID);
-//					try
-//					{
-//						updates.get(legacyID).setValid(true);
-//						printer.printRecord(updates.get(legacyID).toString(), legacyID, mutationID, genomicID);
-						updates.get(legacyID).getMutationIDs().add(mutationID);
-						updates.get(legacyID).setCosvIdentifier(genomicID);
-//					}
-//					catch (IOException e)
-//					{
-//						e.printStackTrace();
-//					}
+					updates.get(legacyID).getMutationIDs().add(mutationID);
+					updates.get(legacyID).setCosvIdentifier(genomicID);
 				}
 			
 			});
@@ -164,22 +148,19 @@ public class Main extends ReleaseStep
 				String genomicID = record.get("GENOMIC_MUTATION_ID");
 				if (updates.containsKey(legacyID))
 				{
-						updates.get(legacyID).setValid(true); // only VALID if in MutantExport...
-						updates.get(legacyID).getMutationIDs().add(mutationID);
-						updates.get(legacyID).setCosvIdentifier(genomicID);
+					updates.get(legacyID).setValid(true); // only VALID if in MutantExport...
+					updates.get(legacyID).getMutationIDs().add(mutationID);
+					updates.get(legacyID).setCosvIdentifier(genomicID);
 				}
 			});
 		}
 	}
 
-	private Map<String, COSMICIdentifierUpdater> determinePrefixes(Collection<GKInstance> cosmicObjects/*,
-			Map<String, Long> oldIdentifierToDBIDMap, Set<String> suggestedIdentifiers,
-			Set<String[]> identifiersWithNewPrefixes*/)
+	private Map<String, COSMICIdentifierUpdater> determinePrefixes(Collection<GKInstance> cosmicObjects)
 		throws InvalidAttributeException, Exception, IOException
 	{
 		Map<String, COSMICIdentifierUpdater> updates = new HashMap<>();
-		try(//CSVPrinter printer = new CSVPrinter(new FileWriter("COSMICIdentifierUpdateReport.csv"), CSVFormat.DEFAULT.withHeader("Old COSMIC identifier", "Referred-to-by EWAS", "Suggested Prefix"));
-			CSVPrinter setPrinter = new CSVPrinter(new FileWriter("CandidateSetsWithCOSMICIdentifiers.csv"), CSVFormat.DEFAULT.withHeader("COSMIC identifier", "Referred-to-by CadidateSet (or other non-EWAS)"));
+		try(CSVPrinter setPrinter = new CSVPrinter(new FileWriter("CandidateSetsWithCOSMICIdentifiers.csv"), CSVFormat.DEFAULT.withHeader("COSMIC identifier", "Referred-to-by CadidateSet (or other non-EWAS)"));
 			CSVPrinter identifiersWithNoReferrerPrinter = new CSVPrinter(new FileWriter("COSMICIdentifiersNoReferrers.csv"), CSVFormat.DEFAULT.withHeader("COSMIC identifier")))
 		{
 		
@@ -201,7 +182,6 @@ public class Main extends ReleaseStep
 					Collection<GKInstance> EWASes = inst.getReferers(ReactomeJavaConstants.crossReference);
 					if (EWASes == null || EWASes.isEmpty())
 					{
-//							logger.info("{} has no referrers", inst.toString());
 						identifiersWithNoReferrerPrinter.printRecord(identifier);
 					}
 					else
@@ -232,13 +212,6 @@ public class Main extends ReleaseStep
 								// If we get to the end of the loop and there is a mismatch, then COSF.
 								prefix = foundMismatchedRefSequence ? "COSF" : "COSM" ;
 								updateRecord.setSuggestedPrefix(prefix);
-//									logger.info("EWAS: {}; old COSMIC identifier: {}; prefix: {}", ewas.toString(), inst.getAttributeValue(ReactomeJavaConstants.identifier), prefix);
-//								if (!identifier.startsWith(prefix))
-//								{
-//									oldIdentifierToDBIDMap.put(identifier, inst.getDBID() );
-//									identifiersWithNewPrefixes.add(new String[]{identifier, ewas.toString(), prefix});
-//									suggestedIdentifiers.add(prefix + identifier);
-//								}
 							}
 							else
 							{
