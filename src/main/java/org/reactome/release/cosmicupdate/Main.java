@@ -59,6 +59,7 @@ public class Main extends ReleaseStep
 	public void executeStep(Properties props) throws Exception
 	{
 		MySQLAdaptor adaptor = ReleaseStep.getMySQLAdaptorFromProperties(props);
+		loadTestModeFromProperties(props);
 		Collection<GKInstance> cosmicObjects = COSMICUpdateUtil.getCOSMICIdentifiers(adaptor);
 		logger.info("{} COSMIC identifiers", cosmicObjects.size());
 		// Filter the identifiers to exclude the COSV prefixes. 
@@ -84,7 +85,10 @@ public class Main extends ReleaseStep
 		
 		COSMICUpdateUtil.validateIdentifiersAgainstFiles(updates, COSMIC_FUSION_EXPORT, COSMIC_MUTATION_TRACKING, COSMIC_MUTANT_EXPORT);
 		printIdentifierUpdateReport(updates);
-		updateIdentifiers(adaptor, updates);
+		if (!this.testMode)
+		{
+			updateIdentifiers(adaptor, updates);
+		}
 	}
 	
 	/**
