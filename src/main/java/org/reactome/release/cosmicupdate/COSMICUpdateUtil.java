@@ -28,7 +28,7 @@ public class COSMICUpdateUtil
 	private static final Logger logger = LogManager.getLogger();
 	
 	/**
-	 * 
+	 * Validate the identifiers in the database by comparing them to the identifiers in the file.
 	 * @param updates
 	 * @param COSMICFusionExportFile
 	 * @param COSMICMutationTrackingFile
@@ -86,7 +86,9 @@ public class COSMICUpdateUtil
 	}
 
 	/**
-	 * 
+	 * Determines the prefixes for COSMIC identifiers. The rule is:
+	 * IF an object has EWASes and there is an EWAS with a FragmentReplacedModification or a FragmentInsertionModification whose referenceSequence 
+	 * is NOT the referenceEntity of the EWAS... then the suggested prefix will be COSF (for Fusion), otherwise, COSM is suggested.
 	 * @param cosmicObjects
 	 * @return
 	 * @throws InvalidAttributeException
@@ -122,38 +124,7 @@ public class COSMICUpdateUtil
 					}
 					else
 					{
-						for (GKInstance ewas : EWASes)
-						{
-							if (ewas.getSchemClass().getName().equals(ReactomeJavaConstants.EntityWithAccessionedSequence))
-							{
-								GKInstance refSequence = (GKInstance) ewas.getAttributeValue(ReactomeJavaConstants.referenceEntity);
-								// get hasModifiedResidue
-								@SuppressWarnings("unchecked")
-								List<GKInstance> modResidues = (List<GKInstance>) ewas.getAttributeValuesList(ReactomeJavaConstants.hasModifiedResidue);
-								
-								boolean foundMismatchedRefSequence = false;
-								int i = 0;
-								while (!foundMismatchedRefSequence && i < modResidues.size())
-								{
-									GKInstance modResidue = modResidues.get(i);
-									if (modResidue.getSchemClass().getName().contains(ReactomeJavaConstants.FragmentReplacedModification)
-										|| modResidue.getSchemClass().getName().contains(ReactomeJavaConstants.FragmentInsertionModification))
-									{
-										GKInstance residueRefSequence = (GKInstance) modResidue.getAttributeValue(ReactomeJavaConstants.referenceSequence);
-										foundMismatchedRefSequence = !residueRefSequence.getDBID().equals(refSequence.getDBID());
-									}
-									i++;
-								}
-								
-								// If we get to the end of the loop and there is a mismatch, then COSF.
-								prefix = foundMismatchedRefSequence ? COSMIC_FUSION_PREFIX : "COSM";
-								updateRecord.setSuggestedPrefix(prefix);
-							}
-							else
-							{
-								nonEWASPrinter.printRecord(identifier, ewas.toString());
-							}
-						}
+						checkEWASes(nonEWASPrinter, identifier, updateRecord, EWASes);
 					}
 				}
 				if (identifier.startsWith("C"))
@@ -170,6 +141,76 @@ public class COSMICUpdateUtil
 		return updates;
 	}
 
+	/**
+	 * Checks EWASes to see if they have modifiedResidues that have a referenceSequence that is NOT the same as the EWASes referenceEntity.
+	 * @param nonEWASPrinter
+	 * @param identifier
+	 * @param updateRecord
+	 * @param EWASes
+	 * @throws InvalidAttributeException
+	 * @throws Exception
+	 * @throws IOException
+	 */
+	private static void checkEWASes(CSVPrinter nonEWASPrinter, String identifier, COSMICIdentifierUpdater updateRecord, Collection<GKInstance> EWASes) throws InvalidAttributeException, Exception, IOException
+	{
+		String prefix;
+		for (GKInstance ewas : EWASes)
+		{
+			if (ewas.getSchemClass().getName().equals(ReactomeJavaConstants.EntityWithAccessionedSequence))
+			{
+				GKInstance refSequence = (GKInstance) ewas.getAttributeValue(ReactomeJavaConstants.referenceEntity);
+				// get hasModifiedResidue
+				@SuppressWarnings("unchecked")
+				List<GKInstance> modResidues = (List<GKInstance>) ewas.getAttributeValuesList(ReactomeJavaConstants.hasModifiedResidue);
+				
+				boolean foundMismatchedRefSequence = checkReferenceSequences(refSequence, modResidues);
+				
+				// If we get to the end of the loop and there is a mismatch, then COSF.
+				prefix = foundMismatchedRefSequence ? COSMIC_FUSION_PREFIX : "COSM";
+				updateRecord.setSuggestedPrefix(prefix);
+			}
+			else
+			{
+				nonEWASPrinter.printRecord(identifier, ewas.toString());
+			}
+		}
+	}
+
+	/**
+	 * Checks modifiedResidues (only FragmentReplacedModification and FragmentInsertionModification are of interest) to see if they match
+	 * refSequence. 
+	 * @param refSequence
+	 * @param modResidues
+	 * @return
+	 * @throws InvalidAttributeException
+	 * @throws Exception
+	 */
+	private static boolean checkReferenceSequences(GKInstance refSequence, List<GKInstance> modResidues)
+			throws InvalidAttributeException, Exception {
+		boolean foundMismatchedRefSequence = false;
+		int i = 0;
+		while (!foundMismatchedRefSequence && i < modResidues.size())
+		{
+			GKInstance modResidue = modResidues.get(i);
+			if (modResidue.getSchemClass().getName().contains(ReactomeJavaConstants.FragmentReplacedModification)
+				|| modResidue.getSchemClass().getName().contains(ReactomeJavaConstants.FragmentInsertionModification))
+			{
+				GKInstance residueRefSequence = (GKInstance) modResidue.getAttributeValue(ReactomeJavaConstants.referenceSequence);
+				foundMismatchedRefSequence = !residueRefSequence.getDBID().equals(refSequence.getDBID());
+			}
+			i++;
+		}
+		return foundMismatchedRefSequence;
+	}
+
+	/**
+	 * Gets COSMIC identifiers from the database.
+	 * @param adaptor
+	 * @return
+	 * @throws SQLException
+	 * @throws Exception
+	 * @throws InvalidAttributeException
+	 */
 	static Collection<GKInstance> getCOSMICIdentifiers(MySQLAdaptor adaptor) throws SQLException, Exception, InvalidAttributeException
 	{
 		

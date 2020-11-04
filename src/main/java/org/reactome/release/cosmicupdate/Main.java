@@ -55,34 +55,6 @@ public class Main extends ReleaseStep
 		
 	}
 
-	private static void updateIdentifiers(MySQLAdaptor adaptor, Map<String, COSMICIdentifierUpdater> updates)
-	{
-		for (COSMICIdentifierUpdater updator : updates.values())
-		{
-			try
-			{
-				updator.updateIdentfier(adaptor, creatorID);
-			}
-			catch (Exception e)
-			{
-				logger.error("Exception caught while trying to update identifier: "+updator.toString()+" ; Exception is: ",e);
-			}
-		}		
-	}
-
-	private static void printIdentifierUpdateReport(Map<String, COSMICIdentifierUpdater> updates) throws IOException
-	{
-		try(CSVPrinter printer = new CSVPrinter(new FileWriter("./valid-identifiers.csv"), CSVFormat.DEFAULT.withHeader("DB_ID", "Identifier", "Suggested Prefix", "Valid?", "COSV identifier", "Mutation IDs")))
-		{
-			for (COSMICIdentifierUpdater record : updates.values().parallelStream().sorted().collect(Collectors.toList()))
-			{
-				printer.printRecord(record.getDbID(), record.getIdentifier(), record.getSuggestedPrefix(), record.isValid(), record.getCosvIdentifier(), record.getMutationIDs().toString());
-			}
-		}
-	}
-
-	
-
 	@Override
 	public void executeStep(Properties props) throws Exception
 	{
@@ -113,6 +85,46 @@ public class Main extends ReleaseStep
 		COSMICUpdateUtil.validateIdentifiersAgainstFiles(updates, COSMIC_FUSION_EXPORT, COSMIC_MUTATION_TRACKING, COSMIC_MUTANT_EXPORT);
 		printIdentifierUpdateReport(updates);
 		updateIdentifiers(adaptor, updates);
-		
 	}
+	
+	/**
+	 * Updates the identifiers that need updating.
+	 * @param adaptor
+	 * @param updates
+	 */
+	private static void updateIdentifiers(MySQLAdaptor adaptor, Map<String, COSMICIdentifierUpdater> updates)
+	{
+		for (COSMICIdentifierUpdater updator : updates.values())
+		{
+			try
+			{
+				updator.updateIdentfier(adaptor, creatorID);
+			}
+			catch (Exception e)
+			{
+				logger.error("Exception caught while trying to update identifier: "+updator.toString()+" ; Exception is: ",e);
+			}
+		}		
+	}
+
+	/**
+	 * Produces a report on identifiers. Report indicates old/"legacy" identifiers, suggested prefixes, new identifiers suggested from COSMIC files,
+	 * and validity of old identifiers.
+	 * @param updates
+	 * @throws IOException
+	 */
+	private static void printIdentifierUpdateReport(Map<String, COSMICIdentifierUpdater> updates) throws IOException
+	{
+		try(CSVPrinter printer = new CSVPrinter(new FileWriter("./valid-identifiers.csv"), CSVFormat.DEFAULT.withHeader("DB_ID", "Identifier", "Suggested Prefix", "Valid?", "COSV identifier", "Mutation IDs")))
+		{
+			for (COSMICIdentifierUpdater record : updates.values().parallelStream().sorted().collect(Collectors.toList()))
+			{
+				printer.printRecord(record.getDbID(), record.getIdentifier(), record.getSuggestedPrefix(), record.isValid(), record.getCosvIdentifier(), record.getMutationIDs().toString());
+			}
+		}
+	}
+
+	
+
+
 }
