@@ -3,7 +3,6 @@ package org.reactome.release.cosmicupdate;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -26,8 +25,6 @@ public class COSMICIdentifierUpdater implements Comparable<COSMICIdentifierUpdat
 	private static final Logger logger = LogManager.getLogger();
 	private static GKInstance updateWithNewCOSV;
 	private static GKInstance updatePrependCOSM;
-	private static AtomicInteger cosvUpdateCount;
-	private static AtomicInteger cosmPrependCount;
 	private String identifier;
 	private Long dbID;
 	private String suggestedPrefix;
@@ -132,8 +129,6 @@ public class COSMICIdentifierUpdater implements Comparable<COSMICIdentifierUpdat
 			identifierObject.setAttributeValue(ReactomeJavaConstants.identifier, this.getCosvIdentifier());
 			
 			updateIdentifierObject(adaptor, COSMICIdentifierUpdater.updateWithNewCOSV, identifierObject);
-			COSMICIdentifierUpdater.cosvUpdateCount.incrementAndGet();
-			
 		}
 		else if (this.getSuggestedPrefix() != null && this.getSuggestedPrefix().equalsIgnoreCase(COSMICUpdateUtil.COSMIC_LEGACY_PREFIX))
 		{
@@ -151,7 +146,6 @@ public class COSMICIdentifierUpdater implements Comparable<COSMICIdentifierUpdat
 					}
 				}
 				updateIdentifierObject(adaptor, COSMICIdentifierUpdater.updatePrependCOSM, identifierObject);
-				COSMICIdentifierUpdater.cosmPrependCount.incrementAndGet();
 			}
 		}
 		else

@@ -82,7 +82,6 @@ public class Main extends ReleaseStep
 		}).collect(Collectors.toList());
 		logger.info("{} filtered COSMIC identifiers", filteredCosmicObjects.size());
 
-		Main cosmicUpdater = new Main();
 		Map<String, COSMICIdentifierUpdater> updates = COSMICUpdateUtil.determinePrefixes(filteredCosmicObjects);
 		
 		COSMICUpdateUtil.validateIdentifiersAgainstFiles(updates, COSMICFusionExport, COSMICMutationTracking, COSMICMutantExport);
@@ -108,6 +107,7 @@ public class Main extends ReleaseStep
 			}
 			catch (Exception e)
 			{
+				// log a message and a full exception with stack trace.
 				logger.error("Exception caught while trying to update identifier: "+updator.toString()+" ; Exception is: ",e);
 			}
 		}		

@@ -22,6 +22,9 @@ import org.gk.model.ReactomeJavaConstants;
 import org.gk.persistence.MySQLAdaptor;
 import org.gk.schema.InvalidAttributeException;
 
+/*
+ * Thie class contains utility methods that are to be used for updating COSMIC identifiers.
+ */
 public class COSMICUpdateUtil
 {
 	static final String COSMIC_LEGACY_PREFIX = "COSM";
@@ -105,7 +108,6 @@ public class COSMICUpdateUtil
 		try(CSVPrinter nonEWASPrinter = new CSVPrinter(new FileWriter("nonEWASObjectsWithCOSMICIdentifiers.csv"), CSVFormat.DEFAULT.withHeader("COSMIC identifier", "Referred-to-by CadidateSet (or other non-EWAS)"));
 			CSVPrinter identifiersWithNoReferrerPrinter = new CSVPrinter(new FileWriter("COSMICIdentifiersNoReferrers.csv"), CSVFormat.DEFAULT.withHeader("COSMIC identifier")))
 		{
-		
 			for (GKInstance inst : cosmicObjects)
 			{
 				String identifier = (String)inst.getAttributeValue(ReactomeJavaConstants.identifier);
@@ -189,8 +191,8 @@ public class COSMICUpdateUtil
 	 * @throws InvalidAttributeException
 	 * @throws Exception
 	 */
-	private static boolean checkReferenceSequences(GKInstance refSequence, List<GKInstance> modResidues)
-			throws InvalidAttributeException, Exception {
+	private static boolean checkReferenceSequences(GKInstance refSequence, List<GKInstance> modResidues) throws InvalidAttributeException, Exception
+	{
 		boolean foundMismatchedRefSequence = false;
 		int i = 0;
 		while (!foundMismatchedRefSequence && i < modResidues.size())
@@ -217,7 +219,6 @@ public class COSMICUpdateUtil
 	 */
 	static Collection<GKInstance> getCOSMICIdentifiers(MySQLAdaptor adaptor) throws SQLException, Exception, InvalidAttributeException
 	{
-		
 		@SuppressWarnings("unchecked")
 		Collection<GKInstance> refDBs = adaptor.fetchInstanceByAttribute(ReactomeJavaConstants.ReferenceDatabase, ReactomeJavaConstants.name, " = ", "COSMIC");
 		GKInstance cosmicRefDB = null;
