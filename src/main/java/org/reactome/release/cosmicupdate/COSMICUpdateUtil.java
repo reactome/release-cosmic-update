@@ -24,7 +24,12 @@ import org.gk.schema.InvalidAttributeException;
 
 public class COSMICUpdateUtil
 {
-	private static final String COSMIC_FUSION_PREFIX = "COSF";
+	static final String COSMIC_LEGACY_PREFIX = "COSM";
+	private static final String COSMIC_FUSION_ID = "FUSION_ID";
+	private static final String COSMIC_GENOMIC_MUTATION_ID = "GENOMIC_MUTATION_ID";
+	private static final String COSMIC_MUTATION_ID = "MUTATION_ID";
+	private static final String COSMIC_LEGACY_MUTATION_ID = "LEGACY_MUTATION_ID";
+	static final String COSMIC_FUSION_PREFIX = "COSF";
 	private static final Logger logger = LogManager.getLogger();
 	
 	/**
@@ -43,7 +48,7 @@ public class COSMICUpdateUtil
 		try(CSVParser parser = new CSVParser(new FileReader(COSMICFusionExportFile), CSVFormat.DEFAULT.withFirstRecordAsHeader().withDelimiter('\t')); )
 		{
 			parser.forEach( record -> {
-				String fusionID = record.get("FUSION_ID");
+				String fusionID = record.get(COSMIC_FUSION_ID);
 				if (fusionIDs.contains(fusionID))
 				{
 					updates.get(COSMIC_FUSION_PREFIX+fusionID).setValid(true);
@@ -56,9 +61,9 @@ public class COSMICUpdateUtil
 		try(CSVParser parser = new CSVParser(new FileReader(COSMICMutationTrackingFile), CSVFormat.DEFAULT.withFirstRecordAsHeader().withDelimiter('\t'));)
 		{
 			parser.forEach(record -> {
-				String legacyID = record.get("LEGACY_MUTATION_ID");
-				String mutationID = record.get("MUTATION_ID");
-				String genomicID = record.get("GENOMIC_MUTATION_ID");
+				String legacyID = record.get(COSMIC_LEGACY_MUTATION_ID);
+				String mutationID = record.get(COSMIC_MUTATION_ID);
+				String genomicID = record.get(COSMIC_GENOMIC_MUTATION_ID);
 				if (updates.containsKey(legacyID))
 				{
 					updates.get(legacyID).getMutationIDs().add(mutationID);
@@ -68,13 +73,12 @@ public class COSMICUpdateUtil
 			});
 		}
 		logger.info("Now checking with CosmicMutantExport.tsv...");
-		try(CSVParser parser = new CSVParser(new FileReader(COSMICMutantExportFile), CSVFormat.DEFAULT.withFirstRecordAsHeader().withDelimiter('\t'));
-			CSVPrinter printer = new CSVPrinter(new FileWriter("./mappings.csv", true), CSVFormat.DEFAULT.withHeader("DB_ID", "Legacy ID", "Mutation ID", "Genomic ID") ))
+		try(CSVParser parser = new CSVParser(new FileReader(COSMICMutantExportFile), CSVFormat.DEFAULT.withFirstRecordAsHeader().withDelimiter('\t')); )
 		{
 			parser.forEach(record -> {
-				String legacyID = record.get("LEGACY_MUTATION_ID");
-				String mutationID = record.get("MUTATION_ID");
-				String genomicID = record.get("GENOMIC_MUTATION_ID");
+				String legacyID = record.get(COSMIC_LEGACY_MUTATION_ID);
+				String mutationID = record.get(COSMIC_MUTATION_ID);
+				String genomicID = record.get(COSMIC_GENOMIC_MUTATION_ID);
 				if (updates.containsKey(legacyID))
 				{
 					updates.get(legacyID).setValid(true); // only VALID if in MutantExport...
@@ -166,7 +170,7 @@ public class COSMICUpdateUtil
 				boolean foundMismatchedRefSequence = checkReferenceSequences(refSequence, modResidues);
 				
 				// If we get to the end of the loop and there is a mismatch, then COSF.
-				prefix = foundMismatchedRefSequence ? COSMIC_FUSION_PREFIX : "COSM";
+				prefix = foundMismatchedRefSequence ? COSMIC_FUSION_PREFIX : COSMIC_LEGACY_PREFIX;
 				updateRecord.setSuggestedPrefix(prefix);
 			}
 			else
@@ -223,8 +227,8 @@ public class COSMICUpdateUtil
 		}
 		else
 		{
-			logger.info("Too many COSMIC refDBs: {}", refDBs.size());
-			logger.info("Cannot proceeed!");
+			logger.error("Too many COSMIC refDBs: {}", refDBs.size());
+			logger.error("Cannot proceeed!");
 			System.exit(1);
 		}
 		

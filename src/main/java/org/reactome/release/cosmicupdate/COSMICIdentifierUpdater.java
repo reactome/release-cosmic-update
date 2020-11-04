@@ -135,7 +135,7 @@ public class COSMICIdentifierUpdater implements Comparable<COSMICIdentifierUpdat
 			COSMICIdentifierUpdater.cosvUpdateCount.incrementAndGet();
 			
 		}
-		else if (this.getSuggestedPrefix() != null && this.getSuggestedPrefix().equalsIgnoreCase("COSM"))
+		else if (this.getSuggestedPrefix() != null && this.getSuggestedPrefix().equalsIgnoreCase(COSMICUpdateUtil.COSMIC_LEGACY_PREFIX))
 		{
 			GKInstance identifierObject = adaptor.fetchInstance( this.getDbID());
 			String currentIdentifier = (String) identifierObject.getAttributeValue(ReactomeJavaConstants.identifier);

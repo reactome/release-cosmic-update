@@ -25,10 +25,9 @@ import org.reactome.release.common.ReleaseStep;
 
 public class Main extends ReleaseStep
 {
-	// TODO: Move file path values to config file.
-	private static final String COSMIC_MUTANT_EXPORT = "./CosmicMutantExport.tsv";
-	private static final String COSMIC_FUSION_EXPORT = "./CosmicFusionExport.tsv";
-	private static final String COSMIC_MUTATION_TRACKING = "./CosmicMutationTracking.tsv";
+	private static String COSMICMutantExport = "./CosmicMutantExport.tsv";
+	private static String COSMICFusionExport = "./CosmicFusionExport.tsv";
+	private static String COSMICMutationTracking = "./CosmicMutationTracking.tsv";
 
 	private static final Logger logger = LogManager.getLogger();
 	private static long creatorID;
@@ -40,6 +39,9 @@ public class Main extends ReleaseStep
 			{
 				Properties props = new Properties();
 				props.load(configReader);
+				Main.COSMICMutantExport = props.getProperty("pathToMutantExportFile");
+				Main.COSMICFusionExport = props.getProperty("pathToFusionExportFile");
+				Main.COSMICMutationTracking = props.getProperty("pathToMutationTrackingFile");
 				Main cosmicUpdateStep = new Main();
 				cosmicUpdateStep.executeStep(props);
 			}
@@ -83,7 +85,7 @@ public class Main extends ReleaseStep
 		Main cosmicUpdater = new Main();
 		Map<String, COSMICIdentifierUpdater> updates = COSMICUpdateUtil.determinePrefixes(filteredCosmicObjects);
 		
-		COSMICUpdateUtil.validateIdentifiersAgainstFiles(updates, COSMIC_FUSION_EXPORT, COSMIC_MUTATION_TRACKING, COSMIC_MUTANT_EXPORT);
+		COSMICUpdateUtil.validateIdentifiersAgainstFiles(updates, COSMICFusionExport, COSMICMutationTracking, COSMICMutantExport);
 		printIdentifierUpdateReport(updates);
 		if (!this.testMode)
 		{
