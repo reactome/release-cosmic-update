@@ -5,6 +5,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Reader;
 import java.sql.SQLException;
+import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -21,13 +22,24 @@ import org.gk.persistence.MySQLAdaptor;
 import org.gk.schema.InvalidAttributeException;
 import org.reactome.release.common.ReleaseStep;
 
+import com.beust.jcommander.JCommander;
+import com.beust.jcommander.Parameter;
+
 
 
 public class Main extends ReleaseStep
 {
-	private static String COSMICMutantExport = "./CosmicMutantExport.tsv";
-	private static String COSMICFusionExport = "./CosmicFusionExport.tsv";
-	private static String COSMICMutationTracking = "./CosmicMutationTracking.tsv";
+	@Parameter(names = {"-u"}, description = "Specifies that the updates should be performed.")
+	private boolean executeUpdate;
+	
+	@Parameter(names = {"-d"}, converter = DurationConverter.class,
+			description = "The maximum age of a file, before it must be downloaded again. Omitting this parameter means download will not occur. Specifying -d with a 0 value will force a download."
+					+ "Format for a Duration can be found here: https://docs.oracle.com/javase/8/docs/api/java/time/Duration.html#parse-java.lang.CharSequence-")
+	private Duration fileAge;
+	
+	private static String COSMICMutantExport;
+	private static String COSMICFusionExport;
+	private static String COSMICMutationTracking;
 
 	private static final Logger logger = LogManager.getLogger();
 	private static long creatorID;
@@ -35,14 +47,15 @@ public class Main extends ReleaseStep
 	{
 		try
 		{
-			try(Reader configReader = new FileReader("config.properties"))
+			try(Reader configReader = new FileReader("src/main/resources/config.properties"))
 			{
 				Properties props = new Properties();
 				props.load(configReader);
-				Main.COSMICMutantExport = props.getProperty("pathToMutantExportFile");
-				Main.COSMICFusionExport = props.getProperty("pathToFusionExportFile");
-				Main.COSMICMutationTracking = props.getProperty("pathToMutationTrackingFile");
+				Main.COSMICMutantExport = props.getProperty("pathToMutantExportFile", "./CosmicMutantExport.tsv");
+				Main.COSMICFusionExport = props.getProperty("pathToFusionExportFile", "./CosmicFusionExport.tsv");
+				Main.COSMICMutationTracking = props.getProperty("pathToMutationTrackingFile", "./CosmicMutationTracking.tsv");
 				Main cosmicUpdateStep = new Main();
+				JCommander.newBuilder().addObject(cosmicUpdateStep).build().parse(args);
 				cosmicUpdateStep.executeStep(props);
 			}
 		}
@@ -60,35 +73,46 @@ public class Main extends ReleaseStep
 	@Override
 	public void executeStep(Properties props) throws Exception
 	{
-		MySQLAdaptor adaptor = ReleaseStep.getMySQLAdaptorFromProperties(props);
-		loadTestModeFromProperties(props);
-		Collection<GKInstance> cosmicObjects = COSMICUpdateUtil.getCOSMICIdentifiers(adaptor);
-		logger.info("{} COSMIC identifiers", cosmicObjects.size());
-		// Filter the identifiers to exclude the COSV prefixes. 
-		List<GKInstance> filteredCosmicObjects = cosmicObjects.parallelStream().filter(inst -> {
-			try
-			{
-				return !((String)inst.getAttributeValue(ReactomeJavaConstants.identifier)).toUpperCase().startsWith("COSV");
-			}
-			catch (InvalidAttributeException e)
-			{
-				e.printStackTrace();
-			}
-			catch (Exception e)
-			{
-				e.printStackTrace();
-			}
-			return false;
-		}).collect(Collectors.toList());
-		logger.info("{} filtered COSMIC identifiers", filteredCosmicObjects.size());
-
-		Map<String, COSMICIdentifierUpdater> updates = COSMICUpdateUtil.determinePrefixes(filteredCosmicObjects);
-		
-		COSMICUpdateUtil.validateIdentifiersAgainstFiles(updates, COSMICFusionExport, COSMICMutationTracking, COSMICMutantExport);
-		printIdentifierUpdateReport(updates);
-		if (!this.testMode)
+		if (this.fileAge != null)
 		{
-			updateIdentifiers(adaptor, updates);
+			logger.info("User has specified that download process should run.");
+			logger.info("Files will be downloaded if they are older than {}", this.fileAge);
+		}
+		
+		if (this.executeUpdate)
+		{
+			logger.info("User has specified that update process should run.");
+			// TODO: Add a file downloader to retrieve the COSMIC files.
+			MySQLAdaptor adaptor = ReleaseStep.getMySQLAdaptorFromProperties(props);
+			loadTestModeFromProperties(props);
+			Collection<GKInstance> cosmicObjects = COSMICUpdateUtil.getCOSMICIdentifiers(adaptor);
+			logger.info("{} COSMIC identifiers", cosmicObjects.size());
+			// Filter the identifiers to exclude the COSV prefixes. 
+			List<GKInstance> filteredCosmicObjects = cosmicObjects.parallelStream().filter(inst -> {
+				try
+				{
+					return !((String)inst.getAttributeValue(ReactomeJavaConstants.identifier)).toUpperCase().startsWith("COSV");
+				}
+				catch (InvalidAttributeException e)
+				{
+					e.printStackTrace();
+				}
+				catch (Exception e)
+				{
+					e.printStackTrace();
+				}
+				return false;
+			}).collect(Collectors.toList());
+			logger.info("{} filtered COSMIC identifiers", filteredCosmicObjects.size());
+	
+			Map<String, COSMICIdentifierUpdater> updates = COSMICUpdateUtil.determinePrefixes(filteredCosmicObjects);
+			
+			COSMICUpdateUtil.validateIdentifiersAgainstFiles(updates, COSMICFusionExport, COSMICMutationTracking, COSMICMutantExport);
+			printIdentifierUpdateReport(updates);
+			if (!this.testMode)
+			{
+				updateIdentifiers(adaptor, updates);
+			}
 		}
 	}
 	
@@ -121,7 +145,7 @@ public class Main extends ReleaseStep
 	 */
 	private static void printIdentifierUpdateReport(Map<String, COSMICIdentifierUpdater> updates) throws IOException
 	{
-		try(CSVPrinter printer = new CSVPrinter(new FileWriter("./valid-identifiers.csv"), CSVFormat.DEFAULT.withHeader("DB_ID", "Identifier", "Suggested Prefix", "Valid?", "COSV identifier", "Mutation IDs")))
+		try(CSVPrinter printer = new CSVPrinter(new FileWriter("./COSMIC-identifiers-report.csv"), CSVFormat.DEFAULT.withHeader("DB_ID", "Identifier", "Suggested Prefix", "Valid?", "COSV identifier", "Mutation IDs")))
 		{
 			for (COSMICIdentifierUpdater record : updates.values().parallelStream().sorted().collect(Collectors.toList()))
 			{
