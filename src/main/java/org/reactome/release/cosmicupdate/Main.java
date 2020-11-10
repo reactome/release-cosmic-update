@@ -88,12 +88,9 @@ public class Main extends ReleaseStep
 		if (this.executeUpdate)
 		{
 			logger.info("User has specified that update process should run.");
-			// TODO: Add a file downloader to retrieve the COSMIC files.
 			MySQLAdaptor adaptor = ReleaseStep.getMySQLAdaptorFromProperties(props);
 			loadTestModeFromProperties(props);
-			
 			downloadFiles();
-			
 			Collection<GKInstance> cosmicObjects = COSMICUpdateUtil.getCOSMICIdentifiers(adaptor);
 			logger.info("{} COSMIC identifiers", cosmicObjects.size());
 			// Filter the identifiers to exclude the COSV prefixes. 
@@ -141,22 +138,10 @@ public class Main extends ReleaseStep
 			mutationTrackingRetriever.setFetchDestination("./mutation_tracking.csv");
 			fusionExportRetriever.setFetchDestination("./fusion_export.csv");
 			
-//			mutantExportRetriever.setMaxAge(Duration.ofHours(24));
-//			mutantExportRetriever.setUserName(Main.COSMICUsername);
-//			mutantExportRetriever.setPassword(Main.COSMICPassword);
-//			mutantExportRetriever.fetchData();
 			this.executeDownload(mutantExportRetriever);
 			
-//			mutationTrackingRetriever.setMaxAge(Duration.ofHours(24));
-//			mutationTrackingRetriever.setUserName(Main.COSMICUsername);
-//			mutationTrackingRetriever.setPassword(Main.COSMICPassword);
-//			mutationTrackingRetriever.fetchData();
 			this.executeDownload(mutationTrackingRetriever);
 			
-//			fusionExportRetriever.setMaxAge(Duration.ofHours(24));
-//			fusionExportRetriever.setUserName(Main.COSMICUsername);
-//			fusionExportRetriever.setPassword(Main.COSMICPassword);
-//			fusionExportRetriever.fetchData();
 			this.executeDownload(fusionExportRetriever);
 		}
 		catch (URISyntaxException e)
@@ -198,7 +183,7 @@ public class Main extends ReleaseStep
 				// log a message and a full exception with stack trace.
 				logger.error("Exception caught while trying to update identifier: "+updater.toString()+" ; Exception is: ",e);
 			}
-		}		
+		}
 	}
 
 	/**
@@ -217,8 +202,4 @@ public class Main extends ReleaseStep
 			}
 		}
 	}
-
-	
-
-
 }
