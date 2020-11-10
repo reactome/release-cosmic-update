@@ -83,6 +83,7 @@ public class Main extends ReleaseStep
 		{
 			logger.info("User has specified that download process should run.");
 			logger.info("Files will be downloaded if they are older than {}", this.fileAge);
+			this.downloadFiles();
 		}
 		
 		if (this.executeUpdate)
@@ -134,14 +135,21 @@ public class Main extends ReleaseStep
 			mutationTrackingRetriever.setDataURL(new URI(Main.COSMICMutationTracking));
 			fusionExportRetriever.setDataURL(new URI(Main.COSMICFusionExport));
 			
-			mutantExportRetriever.setFetchDestination("./mutant_export.csv");
-			mutationTrackingRetriever.setFetchDestination("./mutation_tracking.csv");
-			fusionExportRetriever.setFetchDestination("./fusion_export.csv");
+			final String mutantExportDestination = "./mutant_export.tsv";
+			final String mutationTrackingDestination = "./mutation_tracking.tsv";
+			final String fusionExportDestination = "./fusion_export.tsv";
 			
+			mutantExportRetriever.setFetchDestination(mutantExportDestination);
+			mutationTrackingRetriever.setFetchDestination(mutationTrackingDestination);
+			fusionExportRetriever.setFetchDestination(fusionExportDestination);
+			
+			logger.info("Downloading {} to {}", mutantExportRetriever.getDataURL(), mutantExportDestination);
 			this.executeDownload(mutantExportRetriever);
 			
+			logger.info("Downloading {} to {}", mutationTrackingRetriever.getDataURL(), mutationTrackingDestination);
 			this.executeDownload(mutationTrackingRetriever);
 			
+			logger.info("Downloading {} to {}", fusionExportRetriever.getDataURL(), fusionExportDestination);
 			this.executeDownload(fusionExportRetriever);
 		}
 		catch (URISyntaxException e)
