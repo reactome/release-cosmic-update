@@ -25,8 +25,6 @@ import org.reactome.release.common.ReleaseStep;
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 
-
-
 public class Main extends ReleaseStep
 {
 	@Parameter(names = {"-u"}, description = "Specifies that the updates should be performed.")
@@ -123,16 +121,16 @@ public class Main extends ReleaseStep
 	 */
 	private static void updateIdentifiers(MySQLAdaptor adaptor, Map<String, COSMICIdentifierUpdater> updates)
 	{
-		for (COSMICIdentifierUpdater updator : updates.values())
+		for (COSMICIdentifierUpdater updater : updates.values())
 		{
 			try
 			{
-				updator.updateIdentfier(adaptor, creatorID);
+				updater.updateIdentfier(adaptor, creatorID);
 			}
 			catch (Exception e)
 			{
 				// log a message and a full exception with stack trace.
-				logger.error("Exception caught while trying to update identifier: "+updator.toString()+" ; Exception is: ",e);
+				logger.error("Exception caught while trying to update identifier: "+updater.toString()+" ; Exception is: ",e);
 			}
 		}		
 	}
