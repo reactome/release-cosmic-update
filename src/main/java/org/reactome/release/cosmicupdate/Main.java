@@ -42,6 +42,10 @@ public class Main extends ReleaseStep
 	private static String COSMICFusionExport;
 	private static String COSMICMutationTracking;
 
+	private static String COSMICMutantExportURL;
+	private static String COSMICFusionExportURL;
+	private static String COSMICMutationTrackingURL;
+	
 	private static String COSMICUsername;
 	private static String COSMICPassword;
 	
@@ -58,6 +62,9 @@ public class Main extends ReleaseStep
 				Main.COSMICMutantExport = props.getProperty("pathToMutantExportFile", "./CosmicMutantExport.tsv");
 				Main.COSMICFusionExport = props.getProperty("pathToFusionExportFile", "./CosmicFusionExport.tsv");
 				Main.COSMICMutationTracking = props.getProperty("pathToMutationTrackingFile", "./CosmicMutationTracking.tsv");
+				Main.COSMICMutantExportURL = props.getProperty("urlToMutantExportFile", "https://cancer.sanger.ac.uk/cosmic/file_download/GRCh38/cosmic/v92/CosmicMutantExport.tsv.gz");
+				Main.COSMICFusionExportURL = props.getProperty("urlToFusionExportFile", "https://cancer.sanger.ac.uk/cosmic/file_download/GRCh38/cosmic/v92/CosmicFusionExport.tsv.gz");
+				Main.COSMICMutationTrackingURL = props.getProperty("urlToMutationTrackingFile", "https://cancer.sanger.ac.uk/cosmic/file_download/GRCh38/cosmic/v92//CosmicMutationTracking.tsv.gz");
 				Main.COSMICUsername = props.getProperty("cosmic.username");
 				Main.COSMICPassword = props.getProperty("cosmic.password");
 				Main cosmicUpdateStep = new Main();
@@ -91,7 +98,7 @@ public class Main extends ReleaseStep
 			logger.info("User has specified that update process should run.");
 			MySQLAdaptor adaptor = ReleaseStep.getMySQLAdaptorFromProperties(props);
 			loadTestModeFromProperties(props);
-			downloadFiles();
+			this.downloadFiles();
 			Collection<GKInstance> cosmicObjects = COSMICUpdateUtil.getCOSMICIdentifiers(adaptor);
 			logger.info("{} COSMIC identifiers", cosmicObjects.size());
 			// Filter the identifiers to exclude the COSV prefixes. 
@@ -131,13 +138,13 @@ public class Main extends ReleaseStep
 		
 		try
 		{
-			mutantExportRetriever.setDataURL(new URI(Main.COSMICMutantExport));
-			mutationTrackingRetriever.setDataURL(new URI(Main.COSMICMutationTracking));
-			fusionExportRetriever.setDataURL(new URI(Main.COSMICFusionExport));
+			mutantExportRetriever.setDataURL(new URI(Main.COSMICMutantExportURL));
+			mutationTrackingRetriever.setDataURL(new URI(Main.COSMICMutationTrackingURL));
+			fusionExportRetriever.setDataURL(new URI(Main.COSMICFusionExportURL));
 			
-			final String mutantExportDestination = "./mutant_export.tsv";
-			final String mutationTrackingDestination = "./mutation_tracking.tsv";
-			final String fusionExportDestination = "./fusion_export.tsv";
+			final String mutantExportDestination = "./mutant_export.tsv.gz";
+			final String mutationTrackingDestination = "./mutation_tracking.tsv.gz";
+			final String fusionExportDestination = "./fusion_export.tsv.gz";
 			
 			mutantExportRetriever.setFetchDestination(mutantExportDestination);
 			mutationTrackingRetriever.setFetchDestination(mutationTrackingDestination);
