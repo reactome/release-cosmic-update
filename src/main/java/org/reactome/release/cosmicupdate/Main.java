@@ -1,14 +1,11 @@
 package org.reactome.release.cosmicupdate;
 
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Reader;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.SQLException;
 import java.time.Duration;
@@ -17,11 +14,9 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
-import java.util.zip.GZIPInputStream;
 
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
@@ -33,6 +28,7 @@ import org.gk.persistence.MySQLAdaptor;
 import org.gk.schema.InvalidAttributeException;
 import org.reactome.release.common.ReleaseStep;
 import org.reactome.release.common.dataretrieval.cosmic.COSMICFileRetriever;
+import org.reactome.util.general.GUnzipCallable;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
@@ -61,59 +57,6 @@ public class Main extends ReleaseStep
 	
 	private static final Logger logger = LogManager.getLogger();
 	private static long creatorID;
-	
-	/**
-	 * An object that can unzip a path, and mutliple instances of this type could be run in parallel.
-	 * It made more sense to implement Runnable, but ExecutorService.invokeAll only accepts Callables.
-	 * The return of this calling call() on this object will be true if unzipping doesn't completely fail,
-	 * but you should not rely on this. The source file does *not* get removed by this process.
-	 * @author sshorser
-	 *
-	 */
-	class UnzipCallable implements Callable<Boolean>
-	{
-		Path source, target;
-		
-		/**
-		 * Creates an UnzipCallable
-		 * @param src - The path to the file to unzip.
-		 * @param targ - The path where the content should be unzipped to.
-		 */
-		public UnzipCallable(Path src, Path targ)
-		{
-			this.source = src;
-			this.target = targ;
-		}
-		
-		/**
-		 * Decompress a gzip file.
-		 * @throws IOException
-		 */
-		public void decompressGzip() throws IOException
-		{
-			logger.info("Extracting {} to {}", this.source, this.target);
-			try (GZIPInputStream gis = new GZIPInputStream(new FileInputStream(this.source.toFile()));
-					FileOutputStream fos = new FileOutputStream(this.target.toFile()))
-			{
-				// copy GZIPInputStream to FileOutputStream
-				byte[] buffer = new byte[1024];
-				int len;
-				while ((len = gis.read(buffer)) > 0)
-				{
-					fos.write(buffer, 0, len);
-				}
-			}
-			logger.info("Completed: Extraction of {} to {}", this.source, this.target);
-		}
-		
-		@Override
-		public Boolean call() throws IOException
-		{
-			this.decompressGzip();
-			// If decompress doesn't fail, then true will be returned.
-			return true;
-		}
-	}
 	
 	public static void main(String... args)
 	{
@@ -161,9 +104,9 @@ public class Main extends ReleaseStep
 		{
 			logger.info("User has specified that update process should run.");
 			// first thing, check the files and unzip them if necessary.
-			UnzipCallable unzipper1 = new UnzipCallable(Paths.get(Main.COSMICFusionExport + ".gz"), Paths.get(Main.COSMICFusionExport));
-			UnzipCallable unzipper2 = new UnzipCallable(Paths.get(Main.COSMICMutantExport + ".gz"), Paths.get(Main.COSMICMutantExport));
-			UnzipCallable unzipper3 = new UnzipCallable(Paths.get(Main.COSMICMutationTracking + ".gz"), Paths.get(Main.COSMICMutationTracking));
+			GUnzipCallable unzipper1 = new GUnzipCallable(Paths.get(Main.COSMICFusionExport + ".gz"), Paths.get(Main.COSMICFusionExport));
+			GUnzipCallable unzipper2 = new GUnzipCallable(Paths.get(Main.COSMICMutantExport + ".gz"), Paths.get(Main.COSMICMutantExport));
+			GUnzipCallable unzipper3 = new GUnzipCallable(Paths.get(Main.COSMICMutationTracking + ".gz"), Paths.get(Main.COSMICMutationTracking));
 			
 			ExecutorService execService = Executors.newCachedThreadPool();
 			// The files are large and it could be slow to unzip them sequentially, so we will unzip them in parallel.
