@@ -66,7 +66,7 @@ public class Main extends ReleaseStep
 	 * An object that can unzip a path, and mutliple instances of this type could be run in parallel.
 	 * It made more sense to implement Runnable, but ExecutorService.invokeAll only accepts Callables.
 	 * The return of this calling call() on this object will be true if unzipping doesn't completely fail,
-	 * but you should not rely on this.
+	 * but you should not rely on this. The source file does *not* get removed by this process.
 	 * @author sshorser
 	 *
 	 */
@@ -74,12 +74,21 @@ public class Main extends ReleaseStep
 	{
 		Path source, target;
 		
+		/**
+		 * Creates an UnzipCallable
+		 * @param src - The path to the file to unzip.
+		 * @param targ - The path where the content should be unzipped to.
+		 */
 		public UnzipCallable(Path src, Path targ)
 		{
 			this.source = src;
 			this.target = targ;
 		}
 		
+		/**
+		 * Decompress a gzip file.
+		 * @throws IOException
+		 */
 		public void decompressGzip() throws IOException
 		{
 			logger.info("Extracting {} to {}", this.source, this.target);
@@ -157,6 +166,7 @@ public class Main extends ReleaseStep
 			UnzipCallable unzipper3 = new UnzipCallable(Paths.get(Main.COSMICMutationTracking + ".gz"), Paths.get(Main.COSMICMutationTracking));
 			
 			ExecutorService execService = Executors.newCachedThreadPool();
+			// The files are large and it could be slow to unzip them sequentially, so we will unzip them in parallel.
 			execService.invokeAll(Arrays.asList(unzipper1, unzipper2, unzipper3));
 			execService.shutdown();
 			
@@ -194,6 +204,10 @@ public class Main extends ReleaseStep
 		}
 	}
 
+	/**
+	 * Download the data files from COSMIC.
+	 * @throws Exception
+	 */
 	private void downloadFiles() throws Exception
 	{
 		COSMICFileRetriever mutantExportRetriever = new COSMICFileRetriever();
@@ -236,9 +250,14 @@ public class Main extends ReleaseStep
 		}
 	}
 	
+	/**
+	 * Executes a single download.
+	 * @param retriever - the file retriever to run.
+	 * @throws Exception
+	 */
 	private void executeDownload(COSMICFileRetriever retriever) throws Exception
 	{
-		retriever.setMaxAge(Duration.ofHours(24));
+		retriever.setMaxAge(this.fileAge);
 		retriever.setUserName(Main.COSMICUsername);
 		retriever.setPassword(Main.COSMICPassword);
 		retriever.fetchData();
