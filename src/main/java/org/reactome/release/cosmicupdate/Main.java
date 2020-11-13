@@ -163,9 +163,9 @@ public class Main extends ReleaseStep
 			mutationTrackingRetriever.setDataURL(new URI(Main.COSMICMutationTrackingURL));
 			fusionExportRetriever.setDataURL(new URI(Main.COSMICFusionExportURL));
 			
-			final String mutantExportDestination = "./mutant_export.tsv.gz";
-			final String mutationTrackingDestination = "./mutation_tracking.tsv.gz";
-			final String fusionExportDestination = "./fusion_export.tsv.gz";
+			final String mutantExportDestination = "./CosmicMutantExport.tsv.gz";
+			final String mutationTrackingDestination = "./CosmicMutationTracking.tsv.gz";
+			final String fusionExportDestination = "./CosmicFusionExport.tsv.gz";
 			
 			mutantExportRetriever.setFetchDestination(mutantExportDestination);
 			mutationTrackingRetriever.setFetchDestination(mutationTrackingDestination);
