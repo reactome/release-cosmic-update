@@ -56,8 +56,8 @@ public class Main extends ReleaseStep
 	private static String COSMICPassword;
 	
 	private static final Logger logger = LogManager.getLogger();
-	private static long creatorID;
-	
+	private static long personID;
+
 	public static void main(String... args)
 	{
 		try
@@ -74,6 +74,7 @@ public class Main extends ReleaseStep
 				Main.COSMICMutationTrackingURL = props.getProperty("urlToMutationTrackingFile", "https://cancer.sanger.ac.uk/cosmic/file_download/GRCh38/cosmic/v92//CosmicMutationTracking.tsv.gz");
 				Main.COSMICUsername = props.getProperty("cosmic.username");
 				Main.COSMICPassword = props.getProperty("cosmic.password");
+				Main.personID = Long.parseLong(props.getProperty("personID"));
 				Main cosmicUpdateStep = new Main();
 				JCommander.newBuilder().addObject(cosmicUpdateStep).build().parse(args);
 				cosmicUpdateStep.executeStep(props);
@@ -115,7 +116,6 @@ public class Main extends ReleaseStep
 			
 			MySQLAdaptor adaptor = ReleaseStep.getMySQLAdaptorFromProperties(props);
 			loadTestModeFromProperties(props);
-			this.downloadFiles();
 			Collection<GKInstance> cosmicObjects = COSMICUpdateUtil.getCOSMICIdentifiers(adaptor);
 			logger.info("{} COSMIC identifiers", cosmicObjects.size());
 			// Filter the identifiers to exclude the COSV prefixes. 
@@ -210,19 +210,21 @@ public class Main extends ReleaseStep
 	 * Updates the identifiers that need updating.
 	 * @param adaptor
 	 * @param updates
+	 * @throws Exception 
 	 */
-	private static void updateIdentifiers(MySQLAdaptor adaptor, Map<String, COSMICIdentifierUpdater> updates)
+	private static void updateIdentifiers(MySQLAdaptor adaptor, Map<String, COSMICIdentifierUpdater> updates) throws Exception
 	{
 		for (COSMICIdentifierUpdater updater : updates.values())
 		{
 			try
 			{
-				updater.updateIdentfier(adaptor, creatorID);
+				updater.updateIdentfier(adaptor, personID);
 			}
 			catch (Exception e)
 			{
 				// log a message and a full exception with stack trace.
 				logger.error("Exception caught while trying to update identifier: "+updater.toString()+" ; Exception is: ",e);
+				throw e;
 			}
 		}
 	}
