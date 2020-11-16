@@ -118,7 +118,7 @@ public class COSMICIdentifierUpdater implements Comparable<COSMICIdentifierUpdat
 		if (this.getCosvIdentifier() != null && !this.getCosvIdentifier().isEmpty())
 		{
 			// Create the InstanceEdit, if necessary.
-			synchronized (COSMICIdentifierUpdater.updateWithNewCOSV)
+			synchronized (COSMICIdentifierUpdater.class)
 			{
 				if (COSMICIdentifierUpdater.updateWithNewCOSV == null)
 				{
@@ -138,7 +138,7 @@ public class COSMICIdentifierUpdater implements Comparable<COSMICIdentifierUpdat
 			{
 				identifierObject.setAttributeValue(ReactomeJavaConstants.identifier, this.getSuggestedPrefix() + currentIdentifier);
 				// Create the InstanceEdit, if necessary.
-				synchronized (COSMICIdentifierUpdater.updatePrependCOSM)
+				synchronized (COSMICIdentifierUpdater.class)
 				{
 					if (COSMICIdentifierUpdater.updatePrependCOSM == null)
 					{
