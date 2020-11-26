@@ -124,10 +124,6 @@ public class Main extends ReleaseStep
 				{
 					return !((String)inst.getAttributeValue(ReactomeJavaConstants.identifier)).toUpperCase().startsWith("COSV");
 				}
-				catch (InvalidAttributeException e)
-				{
-					e.printStackTrace();
-				}
 				catch (Exception e)
 				{
 					e.printStackTrace();
@@ -171,13 +167,13 @@ public class Main extends ReleaseStep
 			mutationTrackingRetriever.setFetchDestination(mutationTrackingDestination);
 			fusionExportRetriever.setFetchDestination(fusionExportDestination);
 			
-			logger.info("Downloading {} to {}", mutantExportRetriever.getDataURL(), mutantExportDestination);
+			logDownloadMessage(mutantExportRetriever, mutantExportDestination);
 			this.executeDownload(mutantExportRetriever);
 			
-			logger.info("Downloading {} to {}", mutationTrackingRetriever.getDataURL(), mutationTrackingDestination);
+			logDownloadMessage(mutationTrackingRetriever, mutationTrackingDestination);
 			this.executeDownload(mutationTrackingRetriever);
 			
-			logger.info("Downloading {} to {}", fusionExportRetriever.getDataURL(), fusionExportDestination);
+			logDownloadMessage(fusionExportRetriever, fusionExportDestination);
 			this.executeDownload(fusionExportRetriever);
 		}
 		catch (URISyntaxException e)
@@ -191,6 +187,11 @@ public class Main extends ReleaseStep
 			// throw the exception further up the stack - can't continue if file downloads are failing.
 			throw e;
 		}
+	}
+
+	private void logDownloadMessage(COSMICFileRetriever retriever, final String destination)
+	{
+		logger.info("Downloading {} to {}", retriever.getDataURL(), destination);
 	}
 	
 	/**
@@ -223,7 +224,7 @@ public class Main extends ReleaseStep
 			catch (Exception e)
 			{
 				// log a message and a full exception with stack trace.
-				logger.error("Exception caught while trying to update identifier: "+updater.toString()+" ; Exception is: ",e);
+				logger.error("Exception caught while trying to update identifier: "+updater.toString()+" ; Exception is: ", e);
 				throw e;
 			}
 		}
