@@ -35,6 +35,12 @@ public class COSMICUpdateUtil
 	static final String COSMIC_FUSION_PREFIX = "COSF";
 	private static final Logger logger = LogManager.getLogger();
 	
+	// Private constructor to prevent instantiation of utility class
+	private COSMICUpdateUtil()
+	{
+		// ...no-op
+	}
+	
 	/**
 	 * Validate the identifiers in the database by comparing them to the identifiers in the file.
 	 * @param updates
@@ -228,7 +234,7 @@ public class COSMICUpdateUtil
 		}
 		else
 		{
-			logger.error("Too many COSMIC refDBs: {}", refDBs.size());
+			logger.error("Wrong number of COSMIC refDBs: {} - only 1 was expected.", refDBs.size());
 			logger.error("Cannot proceeed!");
 			System.exit(1);
 		}
