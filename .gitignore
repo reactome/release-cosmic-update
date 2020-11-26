@@ -32,3 +32,6 @@ target
 # Project-specific
 *.tsv.gz
 *.tsv
+*.csv
+reports/*
+*.log
