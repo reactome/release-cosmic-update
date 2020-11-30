@@ -4,6 +4,8 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.sql.SQLException;
 import java.util.Collection;
 import java.util.HashMap;
@@ -111,8 +113,15 @@ public class COSMICUpdateUtil
 	static Map<String, COSMICIdentifierUpdater> determinePrefixes(Collection<GKInstance> cosmicObjects) throws InvalidAttributeException, Exception, IOException
 	{
 		Map<String, COSMICIdentifierUpdater> updates = new HashMap<>();
-		try(CSVPrinter nonEWASPrinter = new CSVPrinter(new FileWriter("nonEWASObjectsWithCOSMICIdentifiers.csv"), CSVFormat.DEFAULT.withHeader("COSMIC identifier", "Referred-to-by CadidateSet (or other non-EWAS)"));
-			CSVPrinter identifiersWithNoReferrerPrinter = new CSVPrinter(new FileWriter("COSMICIdentifiersNoReferrers.csv"), CSVFormat.DEFAULT.withHeader("COSMIC identifier")))
+		
+		// Create the reports directory if it's missing.
+		if (!Files.exists(Paths.get("reports")))
+		{
+			Files.createDirectories(Paths.get("reports"));
+		}
+		
+		try(CSVPrinter nonEWASPrinter = new CSVPrinter(new FileWriter("reports/nonEWASObjectsWithCOSMICIdentifiers.csv"), CSVFormat.DEFAULT.withHeader("COSMIC identifier", "Referred-to-by CadidateSet (or other non-EWAS)"));
+			CSVPrinter identifiersWithNoReferrerPrinter = new CSVPrinter(new FileWriter("reports/COSMICIdentifiersNoReferrers.csv"), CSVFormat.DEFAULT.withHeader("COSMIC identifier")))
 		{
 			for (GKInstance inst : cosmicObjects)
 			{

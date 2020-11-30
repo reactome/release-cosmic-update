@@ -238,7 +238,7 @@ public class Main extends ReleaseStep
 	 */
 	private static void printIdentifierUpdateReport(Map<String, COSMICIdentifierUpdater> updates) throws IOException
 	{
-		try(CSVPrinter printer = new CSVPrinter(new FileWriter("./COSMIC-identifiers-report.csv"), CSVFormat.DEFAULT.withHeader("DB_ID", "Identifier", "Suggested Prefix", "Valid?", "COSV identifier", "Mutation IDs")))
+		try(CSVPrinter printer = new CSVPrinter(new FileWriter("reports/COSMIC-identifiers-report.csv"), CSVFormat.DEFAULT.withHeader("DB_ID", "Identifier", "Suggested Prefix", "Valid?", "COSV identifier", "Mutation IDs")))
 		{
 			for (COSMICIdentifierUpdater record : updates.values().parallelStream().sorted().collect(Collectors.toList()))
 			{

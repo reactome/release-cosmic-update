@@ -36,3 +36,5 @@ target
 reports/*
 *.log
 logs/*
+reports
+logs
