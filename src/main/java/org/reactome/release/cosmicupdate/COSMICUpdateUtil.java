@@ -252,4 +252,27 @@ public class COSMICUpdateUtil
 		Collection<GKInstance> cosmicObjects = adaptor.fetchInstanceByAttribute(ReactomeJavaConstants.DatabaseIdentifier, ReactomeJavaConstants.referenceDatabase, " = ", cosmicRefDB.getAttributeValue(ReactomeJavaConstants.DB_ID));
 		return cosmicObjects;
 	}
+	
+	
+	/**
+	 * Produces a report on identifiers. Report indicates old/"legacy" identifiers, suggested prefixes, new identifiers suggested from COSMIC files,
+	 * and validity of old identifiers.
+	 * @param updates
+	 * @throws IOException
+	 */
+	public static void printIdentifierUpdateReport(Map<String, COSMICIdentifierUpdater> updates) throws IOException
+	{
+		// Create the reports directory if it's missing.
+		if (!Files.exists(Paths.get("reports")))
+		{
+			Files.createDirectories(Paths.get("reports"));
+		}
+		try(CSVPrinter printer = new CSVPrinter(new FileWriter("reports/COSMIC-identifiers-report.csv"), CSVFormat.DEFAULT.withHeader("DB_ID", "Identifier", "Suggested Prefix", "Valid?", "COSV identifier", "Mutation IDs")))
+		{
+			for (COSMICIdentifierUpdater record : updates.values().parallelStream().sorted().collect(Collectors.toList()))
+			{
+				printer.printRecord(record.getDbID(), record.getIdentifier(), record.getSuggestedPrefix(), record.isValid(), record.getCosvIdentifier(), record.getMutationIDs().toString());
+			}
+		}
+	}
 }
