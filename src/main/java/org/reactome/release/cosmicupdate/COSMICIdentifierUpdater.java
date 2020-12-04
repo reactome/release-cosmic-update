@@ -113,6 +113,12 @@ public class COSMICIdentifierUpdater implements Comparable<COSMICIdentifierUpdat
 		return 0;
 	}
 
+	/**
+	 * Perform an update of a COSMIC identifier.
+	 * @param adaptor - the database adapter to use.
+	 * @param creatorID - the DB_ID of the Creator of this update.
+	 * @throws Exception
+	 */
 	public void updateIdentfier(MySQLAdaptor adaptor, long creatorID) throws Exception
 	{
 		if (this.getCosvIdentifier() != null && !this.getCosvIdentifier().isEmpty())
@@ -126,9 +132,9 @@ public class COSMICIdentifierUpdater implements Comparable<COSMICIdentifierUpdat
 				}
 			}
 			GKInstance identifierObject = adaptor.fetchInstance( this.getDbID());
-			identifierObject.setAttributeValue(ReactomeJavaConstants.identifier, this.getCosvIdentifier());
+//			identifierObject.setAttributeValue(ReactomeJavaConstants.identifier, this.getCosvIdentifier());
 			
-			updateIdentifierObject(adaptor, COSMICIdentifierUpdater.updateWithNewCOSV, identifierObject);
+			updateIdentifierObject(adaptor, COSMICIdentifierUpdater.updateWithNewCOSV, identifierObject, this.getCosvIdentifier());
 		}
 		else if (this.getSuggestedPrefix() != null && this.getSuggestedPrefix().equalsIgnoreCase(COSMICUpdateUtil.COSMIC_LEGACY_PREFIX))
 		{
@@ -136,7 +142,7 @@ public class COSMICIdentifierUpdater implements Comparable<COSMICIdentifierUpdat
 			String currentIdentifier = (String) identifierObject.getAttributeValue(ReactomeJavaConstants.identifier);
 			if (!currentIdentifier.toUpperCase().startsWith("C"))
 			{
-				identifierObject.setAttributeValue(ReactomeJavaConstants.identifier, this.getSuggestedPrefix() + currentIdentifier);
+//				identifierObject.setAttributeValue(ReactomeJavaConstants.identifier, this.getSuggestedPrefix() + currentIdentifier);
 				// Create the InstanceEdit, if necessary.
 				synchronized (COSMICIdentifierUpdater.class)
 				{
@@ -145,7 +151,7 @@ public class COSMICIdentifierUpdater implements Comparable<COSMICIdentifierUpdat
 						COSMICIdentifierUpdater.updatePrependCOSM = InstanceEditUtils.createDefaultIE(adaptor, creatorID, true, "Identifier was automatically prepended with \"COSM\" by COSMIC Update process.");
 					}
 				}
-				updateIdentifierObject(adaptor, COSMICIdentifierUpdater.updatePrependCOSM, identifierObject);
+				updateIdentifierObject(adaptor, COSMICIdentifierUpdater.updatePrependCOSM, identifierObject, this.getSuggestedPrefix() + currentIdentifier);
 			}
 		}
 		else
@@ -154,17 +160,16 @@ public class COSMICIdentifierUpdater implements Comparable<COSMICIdentifierUpdat
 		}
 	}
 	
-
-	
-	private void updateIdentifierObject(MySQLAdaptor adaptor, GKInstance modifiedForCOSMICUpdate, GKInstance identifierObject) throws InvalidAttributeException, Exception, InvalidAttributeValueException
+	private void updateIdentifierObject(MySQLAdaptor adaptor, GKInstance modifiedForCOSMICUpdate, GKInstance identifierObject, String identifierValue) throws InvalidAttributeException, Exception, InvalidAttributeValueException
 	{
 		List<GKInstance> modifications = (List<GKInstance>) identifierObject.getAttributeValuesList(ReactomeJavaConstants.modified);
-
-		modifications.add(modifiedForCOSMICUpdate);
-		identifierObject.setAttributeValue(ReactomeJavaConstants.modified, modifications);
-		
 		String newDisplayName = InstanceDisplayNameGenerator.generateDisplayName(identifierObject);
+		modifications.add(modifiedForCOSMICUpdate);
+		
+		identifierObject.setAttributeValue(ReactomeJavaConstants.modified, modifications);
+		identifierObject.setAttributeValue(ReactomeJavaConstants.identifier, identifierValue);		
 		identifierObject.setAttributeValue(ReactomeJavaConstants._displayName, newDisplayName);
+		
 		adaptor.updateInstanceAttribute(identifierObject, ReactomeJavaConstants.identifier);
 		adaptor.updateInstanceAttribute(identifierObject, ReactomeJavaConstants.modified);
 		adaptor.updateInstanceAttribute(identifierObject, ReactomeJavaConstants._displayName);

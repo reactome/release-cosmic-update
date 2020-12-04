@@ -135,7 +135,7 @@ public class COSMICUpdateUtil
 				// a fragmentModification whose referenceSequence is different
 				// than the EWAS’s referenceSequence  (COSF in this case and COSM otherwise).
 				{
-					String prefix = "";
+//					String prefix = "";
 					
 					@SuppressWarnings("unchecked")
 					Collection<GKInstance> EWASes = inst.getReferers(ReactomeJavaConstants.crossReference);
