@@ -6,9 +6,13 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.gk.model.GKInstance;
+import org.gk.schema.InvalidAttributeException;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -63,6 +67,8 @@ public class COSMICUpdateUtilTest
 		// we only use the FUSION_ID field from the COSMIC Fusion Export.
 		Files.writeString(pathToCOSF, "FUSION_ID\n");
 		Files.writeString(pathToCOSF, "1234\n", StandardOpenOption.APPEND);
+		Files.writeString(pathToCOSF, "COSF6321\n", StandardOpenOption.APPEND);
+		Files.writeString(pathToCOSF, "COSF7890\n", StandardOpenOption.APPEND);
 	}
 	
 	
@@ -74,6 +80,7 @@ public class COSMICUpdateUtilTest
 		COSMICIdentifierUpdater updater1 = new COSMICIdentifierUpdater();
 		COSMICIdentifierUpdater updater2 = new COSMICIdentifierUpdater();
 		updates.put("1234", updater1);
+		updates.put("COSF1234", updater1);
 		updates.put("5678", updater2);
 		
 		try
@@ -84,7 +91,14 @@ public class COSMICUpdateUtilTest
 		{
 			e.printStackTrace();
 			fail();
-		}
-		
+		}		
+	}
+	
+	@Test
+	public void testDeterminePrefixes() throws InvalidAttributeException, IOException, Exception
+	{
+		Collection<GKInstance> cosmicObjects = new ArrayList<>();
+		COSMICUpdateUtil.determinePrefixes(cosmicObjects);
 	}
 }
+
