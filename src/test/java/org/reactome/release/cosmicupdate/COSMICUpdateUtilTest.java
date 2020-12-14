@@ -5,6 +5,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -170,6 +171,9 @@ public class COSMICUpdateUtilTest
 		cosmicObjects.add(mockCosmicObject2);
 		cosmicObjects.add(mockCosmicObject3);
 
+		Path reportPath = Files.createTempDirectory("cosmic_update");
+		COSMICUpdateUtil.setReportsDirectoryPath(reportPath.toAbsolutePath().toString());
+		System.out.println("Reports will be in " + reportPath.toAbsolutePath().toString());
 		// test with list
 		Map<String, COSMICIdentifierUpdater> result = COSMICUpdateUtil.determinePrefixes(cosmicObjects);
 		assertNotNull(result);
@@ -190,6 +194,33 @@ public class COSMICUpdateUtilTest
 			}
 		}
 		COSMICUpdateUtil.printIdentifierUpdateReport(result);
+		boolean identifersReportExists = false;
+		boolean noReferrersReportExists = false;
+		boolean nonEWASReportExists = false;
+		DirectoryStream<Path> dirStream = Files.newDirectoryStream(reportPath);
+		
+		for (Path p : dirStream)
+		{
+			String fileName = p.getFileName().toString();
+			if (fileName.endsWith(".csv"))
+			{
+				if (fileName.startsWith("COSMIC-identifiers-report"))
+				{
+					identifersReportExists = true;
+				}
+				else if (fileName.startsWith("COSMICIdentifiersNoReferrers"))
+				{
+					noReferrersReportExists = true;
+				}
+				else if (fileName.startsWith("nonEWASObjectsWithCOSMICIdentifiers"))
+				{
+					nonEWASReportExists = true;
+				}
+			}
+		}
+		assertTrue(identifersReportExists);
+		assertTrue(noReferrersReportExists);
+		assertTrue(nonEWASReportExists);
 	}
 }
 
