@@ -7,6 +7,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.sql.SQLException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -36,11 +38,18 @@ public class COSMICUpdateUtil
 	private static final String COSMIC_LEGACY_MUTATION_ID = "LEGACY_MUTATION_ID";
 	static final String COSMIC_FUSION_PREFIX = "COSF";
 	private static final Logger logger = LogManager.getLogger();
-	
+	private static String dateSuffix;
+	private static String reportsDirectoryPath = "reports";
 	// Private constructor to prevent instantiation of utility class
 	private COSMICUpdateUtil()
 	{
 		// ...no-op
+	}
+	
+	static
+	{
+		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd_kkmmss");
+		COSMICUpdateUtil.dateSuffix = formatter.format(LocalDateTime.now());
 	}
 	
 	/**
@@ -115,13 +124,13 @@ public class COSMICUpdateUtil
 		Map<String, COSMICIdentifierUpdater> updates = new HashMap<>();
 		
 		// Create the reports directory if it's missing.
-		if (!Files.exists(Paths.get("reports")))
+		if (!Files.exists(Paths.get(COSMICUpdateUtil.reportsDirectoryPath)))
 		{
-			Files.createDirectories(Paths.get("reports"));
+			Files.createDirectories(Paths.get(COSMICUpdateUtil.reportsDirectoryPath));
 		}
 		
-		try(CSVPrinter nonEWASPrinter = new CSVPrinter(new FileWriter("reports/nonEWASObjectsWithCOSMICIdentifiers.csv"), CSVFormat.DEFAULT.withHeader("COSMIC identifier", "Referred-to-by CadidateSet (or other non-EWAS)"));
-			CSVPrinter identifiersWithNoReferrerPrinter = new CSVPrinter(new FileWriter("reports/COSMICIdentifiersNoReferrers.csv"), CSVFormat.DEFAULT.withHeader("COSMIC identifier")))
+		try(CSVPrinter nonEWASPrinter = new CSVPrinter(new FileWriter(COSMICUpdateUtil.reportsDirectoryPath + "/nonEWASObjectsWithCOSMICIdentifiers_"+dateSuffix+".csv"), CSVFormat.DEFAULT.withHeader("COSMIC identifier", "Referred-to-by CadidateSet (or other non-EWAS)"));
+			CSVPrinter identifiersWithNoReferrerPrinter = new CSVPrinter(new FileWriter(COSMICUpdateUtil.reportsDirectoryPath + "/COSMICIdentifiersNoReferrers_"+dateSuffix+".csv"), CSVFormat.DEFAULT.withHeader("COSMIC identifier")))
 		{
 			for (GKInstance inst : cosmicObjects)
 			{
@@ -243,7 +252,7 @@ public class COSMICUpdateUtil
 		}
 		else
 		{
-			logger.error("Wrong number of COSMIC refDBs: {} - only 1 was expected.", refDBs.size());
+			logger.error("Wrong number of COSMIC refDBs: {} ; only 1 was expected.", refDBs.size());
 			logger.error("Cannot proceeed!");
 			System.exit(1);
 		}
@@ -263,16 +272,26 @@ public class COSMICUpdateUtil
 	public static void printIdentifierUpdateReport(Map<String, COSMICIdentifierUpdater> updates) throws IOException
 	{
 		// Create the reports directory if it's missing.
-		if (!Files.exists(Paths.get("reports")))
+		if (!Files.exists(Paths.get(COSMICUpdateUtil.reportsDirectoryPath)))
 		{
-			Files.createDirectories(Paths.get("reports"));
+			Files.createDirectories(Paths.get(COSMICUpdateUtil.reportsDirectoryPath));
 		}
-		try(CSVPrinter printer = new CSVPrinter(new FileWriter("reports/COSMIC-identifiers-report.csv"), CSVFormat.DEFAULT.withHeader("DB_ID", "Identifier", "Suggested Prefix", "Valid?", "COSV identifier", "Mutation IDs")))
+		try(CSVPrinter printer = new CSVPrinter(new FileWriter(COSMICUpdateUtil.reportsDirectoryPath + "/COSMIC-identifiers-report_"+dateSuffix+".csv"), CSVFormat.DEFAULT.withHeader("DB_ID", "Identifier", "Suggested Prefix", "Valid?", "COSV identifier", "Mutation IDs")))
 		{
 			for (COSMICIdentifierUpdater record : updates.values().parallelStream().sorted().collect(Collectors.toList()))
 			{
 				printer.printRecord(record.getDbID(), record.getIdentifier(), record.getSuggestedPrefix(), record.isValid(), record.getCosvIdentifier(), record.getMutationIDs().toString());
 			}
 		}
+	}
+
+	public synchronized static String getReportsDirectoryPath()
+	{
+		return reportsDirectoryPath;
+	}
+
+	public synchronized static void setReportsDirectoryPath(String reportsDirectoryPath)
+	{
+		COSMICUpdateUtil.reportsDirectoryPath = reportsDirectoryPath;
 	}
 }
