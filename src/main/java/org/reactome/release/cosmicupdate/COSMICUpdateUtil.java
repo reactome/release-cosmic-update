@@ -276,11 +276,30 @@ public class COSMICUpdateUtil
 		{
 			Files.createDirectories(Paths.get(COSMICUpdateUtil.reportsDirectoryPath));
 		}
-		try(CSVPrinter printer = new CSVPrinter(new FileWriter(COSMICUpdateUtil.reportsDirectoryPath + "/COSMIC-identifiers-report_"+dateSuffix+".csv"), CSVFormat.DEFAULT.withHeader("DB_ID", "Identifier", "Suggested Prefix", "Valid?", "COSV identifier", "Mutation IDs")))
+		try(CSVPrinter printer = new CSVPrinter(new FileWriter(COSMICUpdateUtil.reportsDirectoryPath + "/COSMIC-identifiers-report_"+dateSuffix+".csv"), CSVFormat.DEFAULT.withHeader("DB_ID", "Identifier", "Suggested Prefix", "Valid (according to COSMIC files)?", "COSV identifier", "Mutation IDs", "COSMIC Search URL")))
 		{
 			for (COSMICIdentifierUpdater record : updates.values().parallelStream().sorted().collect(Collectors.toList()))
 			{
-				printer.printRecord(record.getDbID(), record.getIdentifier(), record.getSuggestedPrefix(), record.isValid(), record.getCosvIdentifier(), record.getMutationIDs().toString());
+				// Include a COSMIC Search URL for the identifier in the report, to make it easier for Curators to follow up on identifiers that might need attention.
+				String url;
+				String identifierForUrl = "";
+				if (record.getIdentifier().startsWith("C"))
+				{
+					identifierForUrl = record.getIdentifier();
+				}
+				else
+				{
+					if (record.getSuggestedPrefix() != null)
+					{
+						identifierForUrl = record.getSuggestedPrefix() + record.getIdentifier();
+					}
+					else
+					{
+						identifierForUrl = record.getIdentifier();
+					}
+				}
+				url = "https://cancer.sanger.ac.uk/cosmic/search?q=" + identifierForUrl;
+				printer.printRecord(record.getDbID(), record.getIdentifier(), record.getSuggestedPrefix(), record.isValid(), record.getCosvIdentifier(), record.getMutationIDs().toString(), url);
 			}
 		}
 	}
