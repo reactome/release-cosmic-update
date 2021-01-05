@@ -54,16 +54,16 @@ public class COSMICUpdateUtil
 	
 	/**
 	 * Validate the identifiers in the database by comparing them to the identifiers in the file.
-	 * @param updates
-	 * @param COSMICFusionExportFile
-	 * @param COSMICMutationTrackingFile
-	 * @param COSMICMutantExportFile
+	 * @param updaters A map of updaters, keyed by COSMIC identifier.
+	 * @param COSMICFusionExportFile The path to the COSMIC Fusion Export file.
+	 * @param COSMICMutationTrackingFile The path o the COSMIC Mutation Tracking file.
+	 * @param COSMICMutantExportFile The path to the COMSIC Mutant Export file.
 	 * @throws IOException
 	 * @throws FileNotFoundException
 	 */
-	static void validateIdentifiersAgainstFiles(Map<String, COSMICIdentifierUpdater> updates, String COSMICFusionExportFile, String COSMICMutationTrackingFile, String COSMICMutantExportFile) throws IOException, FileNotFoundException
+	static void validateIdentifiersAgainstFiles(Map<String, COSMICIdentifierUpdater> updaters, String COSMICFusionExportFile, String COSMICMutationTrackingFile, String COSMICMutantExportFile) throws IOException, FileNotFoundException
 	{
-		Set<String> fusionIDs = updates.keySet().parallelStream().filter(id -> id.toUpperCase().startsWith(COSMIC_FUSION_PREFIX)).map(id -> id.toUpperCase().replaceAll(COSMIC_FUSION_PREFIX,"") ).collect(Collectors.toSet());
+		Set<String> fusionIDs = updaters.keySet().parallelStream().filter(id -> id.toUpperCase().startsWith(COSMIC_FUSION_PREFIX)).map(id -> id.toUpperCase().replaceAll(COSMIC_FUSION_PREFIX,"") ).collect(Collectors.toSet());
 		logger.info("Now checking with CosmicFusionExport.tsv...");
 		try(CSVParser parser = new CSVParser(new FileReader(COSMICFusionExportFile), CSVFormat.DEFAULT.withFirstRecordAsHeader().withDelimiter('\t')); )
 		{
@@ -71,7 +71,7 @@ public class COSMICUpdateUtil
 				String fusionID = record.get(COSMIC_FUSION_ID);
 				if (fusionIDs.contains(fusionID))
 				{
-					updates.get(COSMIC_FUSION_PREFIX+fusionID).setValid(true);
+					updaters.get(COSMIC_FUSION_PREFIX+fusionID).setValid(true);
 				}
 			});
 		}
@@ -84,10 +84,10 @@ public class COSMICUpdateUtil
 				String legacyID = record.get(COSMIC_LEGACY_MUTATION_ID);
 				String mutationID = record.get(COSMIC_MUTATION_ID);
 				String genomicID = record.get(COSMIC_GENOMIC_MUTATION_ID);
-				if (updates.containsKey(legacyID))
+				if (updaters.containsKey(legacyID))
 				{
-					updates.get(legacyID).getMutationIDs().add(mutationID);
-					updates.get(legacyID).setCosvIdentifier(genomicID);
+					updaters.get(legacyID).getMutationIDs().add(mutationID);
+					updaters.get(legacyID).setCosvIdentifier(genomicID);
 				}
 			
 			});
@@ -99,11 +99,11 @@ public class COSMICUpdateUtil
 				String legacyID = record.get(COSMIC_LEGACY_MUTATION_ID);
 				String mutationID = record.get(COSMIC_MUTATION_ID);
 				String genomicID = record.get(COSMIC_GENOMIC_MUTATION_ID);
-				if (updates.containsKey(legacyID))
+				if (updaters.containsKey(legacyID))
 				{
-					updates.get(legacyID).setValid(true); // only VALID if in MutantExport...
-					updates.get(legacyID).getMutationIDs().add(mutationID);
-					updates.get(legacyID).setCosvIdentifier(genomicID);
+					updaters.get(legacyID).setValid(true); // only VALID if in MutantExport...
+					updaters.get(legacyID).getMutationIDs().add(mutationID);
+					updaters.get(legacyID).setCosvIdentifier(genomicID);
 				}
 			});
 		}
@@ -113,8 +113,8 @@ public class COSMICUpdateUtil
 	 * Determines the prefixes for COSMIC identifiers. The rule is:
 	 * IF an object has EWASes and there is an EWAS with a FragmentReplacedModification or a FragmentInsertionModification whose referenceSequence 
 	 * is NOT the referenceEntity of the EWAS... then the suggested prefix will be COSF (for Fusion), otherwise, COSM is suggested.
-	 * @param cosmicObjects
-	 * @return
+	 * @param cosmicObjects Objects that are identified by a COSMIC identifier.
+	 * @return A map of <code>COSMICIdentifierUpdater</code>, keyed by COSMIC identifier.
 	 * @throws InvalidAttributeException
 	 * @throws Exception
 	 * @throws IOException
@@ -136,35 +136,33 @@ public class COSMICUpdateUtil
 			{
 				String identifier = (String)inst.getAttributeValue(ReactomeJavaConstants.identifier);
 			
-				COSMICIdentifierUpdater updateRecord = new COSMICIdentifierUpdater();
-				updateRecord.setIdentifier(identifier);
-				updateRecord.setDbID(inst.getDBID());
-				//if (!identifier.startsWith("C"))
-				// Also, try to determine prefix. The rule is, if the EWAS has
-				// a fragmentModification whose referenceSequence is different
-				// than the EWAS’s referenceSequence  (COSF in this case and COSM otherwise).
+				COSMICIdentifierUpdater updater = new COSMICIdentifierUpdater();
+				updater.setIdentifier(identifier);
+				updater.setDbID(inst.getDBID());
+
+				@SuppressWarnings("unchecked")
+				Collection<GKInstance> EWASes = inst.getReferers(ReactomeJavaConstants.crossReference);
+				// If NO EWASes exist, then log this information.
+				if (EWASes == null || EWASes.isEmpty())
 				{
-//					String prefix = "";
-					
-					@SuppressWarnings("unchecked")
-					Collection<GKInstance> EWASes = inst.getReferers(ReactomeJavaConstants.crossReference);
-					if (EWASes == null || EWASes.isEmpty())
-					{
-						identifiersWithNoReferrerPrinter.printRecord(identifier);
-					}
-					else
-					{
-						checkEWASes(nonEWASPrinter, identifier, updateRecord, EWASes);
-					}
-				}
-				if (identifier.startsWith("C"))
-				{
-					// Consider: is it possible that we might get 1:n mapping for some identifier?
-					updates.put(updateRecord.getIdentifier(), updateRecord);
+					identifiersWithNoReferrerPrinter.printRecord(identifier);
 				}
 				else
 				{
-					updates.put(updateRecord.getSuggestedPrefix() + updateRecord.getIdentifier(), updateRecord);
+					// Check the EWASes for mismatches between referenceSequence identifier and main identifier.
+					// If there's a mismatch then suggest COSF, else suggest COSM.
+					checkEWASes(nonEWASPrinter, identifier, updater, EWASes);
+				}
+				
+				// If the identifier starts with C it's not a numeric identifier.
+				if (identifier.startsWith("C"))
+				{
+					// Consider: is it possible that we might get 1:n mapping for some identifier?
+					updates.put(updater.getIdentifier(), updater);
+				}
+				else
+				{
+					updates.put(updater.getSuggestedPrefix() + updater.getIdentifier(), updater);
 				}
 			}
 		}
@@ -173,15 +171,16 @@ public class COSMICUpdateUtil
 
 	/**
 	 * Checks EWASes to see if they have modifiedResidues that have a referenceSequence that is NOT the same as the EWASes referenceEntity.
-	 * @param nonEWASPrinter
-	 * @param identifier
-	 * @param updateRecord
-	 * @param EWASes
+	 * The suggested prefix will be set to COSF on the update record if mismatches are found, otherwise COSM will be set.
+	 * @param nonEWASPrinter CSVPrinter for reporting.
+	 * @param identifier Identifier of the object being checked, used for reporting.
+	 * @param updater A COSMICIdentifierUpdater whose suggested prefix will be updated.
+	 * @param EWASes The EWASes to check.
 	 * @throws InvalidAttributeException
 	 * @throws Exception
 	 * @throws IOException
 	 */
-	private static void checkEWASes(CSVPrinter nonEWASPrinter, String identifier, COSMICIdentifierUpdater updateRecord, Collection<GKInstance> EWASes) throws InvalidAttributeException, Exception, IOException
+	private static void checkEWASes(CSVPrinter nonEWASPrinter, String identifier, COSMICIdentifierUpdater updater, Collection<GKInstance> EWASes) throws InvalidAttributeException, Exception, IOException
 	{
 		String prefix;
 		for (GKInstance ewas : EWASes)
@@ -193,11 +192,11 @@ public class COSMICUpdateUtil
 				@SuppressWarnings("unchecked")
 				List<GKInstance> modResidues = (List<GKInstance>) ewas.getAttributeValuesList(ReactomeJavaConstants.hasModifiedResidue);
 				
-				boolean foundMismatchedRefSequence = checkReferenceSequences(refSequence, modResidues);
+				boolean foundMismatchedRefSequence = referenceSequenceMismatchesResidues(refSequence, modResidues);
 				
 				// If we get to the end of the loop and there is a mismatch, then COSF.
 				prefix = foundMismatchedRefSequence ? COSMIC_FUSION_PREFIX : COSMIC_LEGACY_PREFIX;
-				updateRecord.setSuggestedPrefix(prefix);
+				updater.setSuggestedPrefix(prefix);
 			}
 			else
 			{
@@ -209,13 +208,13 @@ public class COSMICUpdateUtil
 	/**
 	 * Checks modifiedResidues (only FragmentReplacedModification and FragmentInsertionModification are of interest) to see if they match
 	 * refSequence. 
-	 * @param refSequence
-	 * @param modResidues
-	 * @return
+	 * @param refSequence A Reference Sequence
+	 * @param modResidues The modified residues.
+	 * @return TRUE if there is a mismatch: a mismatch is when the reference sequence DBID != the modified residues's reference sequence's DBID. FALSE, otherwise.
 	 * @throws InvalidAttributeException
 	 * @throws Exception
 	 */
-	private static boolean checkReferenceSequences(GKInstance refSequence, List<GKInstance> modResidues) throws InvalidAttributeException, Exception
+	private static boolean referenceSequenceMismatchesResidues(GKInstance refSequence, List<GKInstance> modResidues) throws InvalidAttributeException, Exception
 	{
 		boolean foundMismatchedRefSequence = false;
 		int i = 0;
@@ -235,8 +234,13 @@ public class COSMICUpdateUtil
 
 	/**
 	 * Gets COSMIC identifiers from the database.
+	 * Queries the database for a ReferenceDatabase named "COSMIC" and then gets all DatabaseIdentifier objects
+	 * that refer to the COSMIC ReferenceDatabase via the referenceDatabase attribute.
+	 * This method will terminate the execution of the program if more than 1 "COSMIC" ReferenceDatabase is found.
+	 * If you plan to add more "COSMIC" ReferenceDatabase objects, this code will need to be changed to use the <em>correct</em> "COSMIC"
+	 * ReferenceDatabase.
 	 * @param adaptor
-	 * @return
+	 * @return A Collection of DatabaseIdentifier objects.
 	 * @throws SQLException
 	 * @throws Exception
 	 * @throws InvalidAttributeException
@@ -266,10 +270,10 @@ public class COSMICUpdateUtil
 	/**
 	 * Produces a report on identifiers. Report indicates old/"legacy" identifiers, suggested prefixes, new identifiers suggested from COSMIC files,
 	 * and validity of old identifiers.
-	 * @param updates
+	 * @param updaters The map of identifier updaters.
 	 * @throws IOException
 	 */
-	public static void printIdentifierUpdateReport(Map<String, COSMICIdentifierUpdater> updates) throws IOException
+	public static void printIdentifierUpdateReport(Map<String, COSMICIdentifierUpdater> updaters) throws IOException
 	{
 		// Create the reports directory if it's missing.
 		if (!Files.exists(Paths.get(COSMICUpdateUtil.reportsDirectoryPath)))
@@ -278,7 +282,7 @@ public class COSMICUpdateUtil
 		}
 		try(CSVPrinter printer = new CSVPrinter(new FileWriter(COSMICUpdateUtil.reportsDirectoryPath + "/COSMIC-identifiers-report_"+dateSuffix+".csv"), CSVFormat.DEFAULT.withHeader("DB_ID", "Identifier", "Suggested Prefix", "Valid (according to COSMIC files)?", "COSV identifier", "Mutation IDs", "COSMIC Search URL")))
 		{
-			for (COSMICIdentifierUpdater record : updates.values().parallelStream().sorted().collect(Collectors.toList()))
+			for (COSMICIdentifierUpdater record : updaters.values().parallelStream().sorted().collect(Collectors.toList()))
 			{
 				// Include a COSMIC Search URL for the identifier in the report, to make it easier for Curators to follow up on identifiers that might need attention.
 				String url;

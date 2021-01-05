@@ -127,13 +127,13 @@ public class Main extends ReleaseStep
 			}).collect(Collectors.toList());
 			logger.info("{} filtered COSMIC identifiers", filteredCosmicObjects.size());
 	
-			Map<String, COSMICIdentifierUpdater> updates = COSMICUpdateUtil.determinePrefixes(filteredCosmicObjects);
+			Map<String, COSMICIdentifierUpdater> updaters = COSMICUpdateUtil.determinePrefixes(filteredCosmicObjects);
 			
-			COSMICUpdateUtil.validateIdentifiersAgainstFiles(updates, COSMICFusionExport, COSMICMutationTracking, COSMICMutantExport);
-			COSMICUpdateUtil.printIdentifierUpdateReport(updates);
+			COSMICUpdateUtil.validateIdentifiersAgainstFiles(updaters, COSMICFusionExport, COSMICMutationTracking, COSMICMutantExport);
+			COSMICUpdateUtil.printIdentifierUpdateReport(updaters);
 			if (!this.testMode)
 			{
-				updateIdentifiers(adaptor, updates);
+				updateIdentifiers(adaptor, updaters);
 			}
 		}
 	}
