@@ -61,15 +61,19 @@ public class Main extends ReleaseStep
 			{
 				Properties props = new Properties();
 				props.load(configReader);
+				
+				// These default to files in the same directory where the program is running.
 				Main.COSMICMutantExport = props.getProperty("pathToMutantExportFile", "./CosmicMutantExport.tsv");
 				Main.COSMICFusionExport = props.getProperty("pathToFusionExportFile", "./CosmicFusionExport.tsv");
 				Main.COSMICMutationTracking = props.getProperty("pathToMutationTrackingFile", "./CosmicMutationTracking.tsv");
-				Main.COSMICMutantExportURL = props.getProperty("urlToMutantExportFile", "https://cancer.sanger.ac.uk/cosmic/file_download/GRCh38/cosmic/v92/CosmicMutantExport.tsv.gz");
-				Main.COSMICFusionExportURL = props.getProperty("urlToFusionExportFile", "https://cancer.sanger.ac.uk/cosmic/file_download/GRCh38/cosmic/v92/CosmicFusionExport.tsv.gz");
-				Main.COSMICMutationTrackingURL = props.getProperty("urlToMutationTrackingFile", "https://cancer.sanger.ac.uk/cosmic/file_download/GRCh38/cosmic/v92//CosmicMutationTracking.tsv.gz");
+				// These have NO default.
 				Main.COSMICUsername = props.getProperty("cosmic.username");
 				Main.COSMICPassword = props.getProperty("cosmic.password");
 				Main.personID = Long.parseLong(props.getProperty("personID"));
+				// These must be set in the properties file.
+				Main.COSMICMutantExportURL = props.getProperty("urlToMutantExportFile");
+				Main.COSMICFusionExportURL = props.getProperty("urlToFusionExportFile");
+				Main.COSMICMutationTrackingURL = props.getProperty("urlToMutationTrackingFile");
 				Main cosmicUpdateStep = new Main();
 				JCommander.newBuilder().addObject(cosmicUpdateStep).build().parse(args);
 				cosmicUpdateStep.executeStep(props);
@@ -99,6 +103,7 @@ public class Main extends ReleaseStep
 		if (this.executeUpdate)
 		{
 			logger.info("User has specified that update process should run.");
+			
 			// first thing, check the files and unzip them if necessary.
 			GUnzipCallable unzipper1 = new GUnzipCallable(Paths.get(Main.COSMICFusionExport + ".gz"), Paths.get(Main.COSMICFusionExport));
 			GUnzipCallable unzipper2 = new GUnzipCallable(Paths.get(Main.COSMICMutantExport + ".gz"), Paths.get(Main.COSMICMutantExport));
@@ -139,11 +144,33 @@ public class Main extends ReleaseStep
 	}
 
 	/**
+	 * Checks that a config value. If it is null or blank or empty,
+	 * an IllegalArgumentException is thrown.
+	 * @param value The value to check
+	 * @param message The message that will be put into the IllegalArgumentException
+	 * @throws IllegalArgumentException If value == null || value.isBlank() || value.isEmpty()
+	 */
+	private void validateConfigValue(String value, String message)
+	{
+		if (value == null || value.isBlank() || value.isEmpty())
+		{
+			throw new IllegalArgumentException(message);
+		}
+	}
+	
+	/**
 	 * Download the data files from COSMIC.
 	 * @throws Exception
 	 */
 	private void downloadFiles() throws Exception
 	{
+		//TODO: Better Properties class in release-common-lib. (for future work)
+		validateConfigValue(Main.COSMICUsername, "COSMIC Username cannot be null/empty! Please set a value for cosmic.username in the application's properties file");
+		validateConfigValue(Main.COSMICUsername, "COSMIC Password cannot be null/empty! Please set a value for cosmic.password in the application's properties file");
+		validateConfigValue(Main.COSMICMutantExportURL, "URL for COSMIC Mutant Export file cannot be null/empty! Please set a value for urlToMutantExportFile in the application's properties file");
+		validateConfigValue(Main.COSMICMutationTrackingURL, "URL for COSMIC Mutation Tracking file cannot be null/empty! Please set a value for urlToMutationTrackingFile in the application's properties file");
+		validateConfigValue(Main.COSMICFusionExportURL, "URL for COSMIC Fusion Export file cannot be null/empty! Please set a value for urlToFusionExportFile in the application's properties file");
+		
 		COSMICFileRetriever mutantExportRetriever = new COSMICFileRetriever();
 		COSMICFileRetriever mutationTrackingRetriever = new COSMICFileRetriever();
 		COSMICFileRetriever fusionExportRetriever = new COSMICFileRetriever();
