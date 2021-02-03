@@ -241,26 +241,16 @@ public class Main extends ReleaseStep
 	{
 		for (List<COSMICIdentifierUpdater> updater : updates.values())
 		{
-//			try
-//			{
-				updater.forEach(u -> {
-					try
-					{
-						u.updateIdentfier(adaptor, personID);
-					}
-					catch (Exception e)
-					{
-						logger.error("Exception caught while trying to update identifier: "+updater.toString()+" ; Exception is: ", e);
-//						throw e;
-					}
-				});
-//			}
-//			catch (Exception e)
-//			{
-//				// log a message and a full exception with stack trace.
-//				logger.error("Exception caught while trying to update identifier: "+updater.toString()+" ; Exception is: ", e);
-//				throw e;
-//			}
+			updater.forEach(u -> {
+				try
+				{
+					u.updateIdentfier(adaptor, personID);
+				}
+				catch (Exception e)
+				{
+					logger.error("Exception caught while trying to update identifier: " + updater.toString() + " ; Exception is: ", e);
+				}
+			});
 		}
 	}
 }

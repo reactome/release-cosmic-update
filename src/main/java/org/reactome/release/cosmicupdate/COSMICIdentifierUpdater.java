@@ -184,7 +184,7 @@ public class COSMICIdentifierUpdater implements Comparable<COSMICIdentifierUpdat
 		modifications.add(modifiedForCOSMICUpdate);
 		
 		identifierObject.setAttributeValue(ReactomeJavaConstants.modified, modifications);
-		identifierObject.setAttributeValue(ReactomeJavaConstants.identifier, identifierValue);		
+		identifierObject.setAttributeValue(ReactomeJavaConstants.identifier, identifierValue);
 		identifierObject.setAttributeValue(ReactomeJavaConstants._displayName, newDisplayName);
 		
 		adaptor.updateInstanceAttribute(identifierObject, ReactomeJavaConstants.identifier);
