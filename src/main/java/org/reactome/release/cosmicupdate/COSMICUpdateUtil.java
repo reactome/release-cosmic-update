@@ -187,7 +187,7 @@ public class COSMICUpdateUtil
 				};
 				
 				// If the identifier starts with C it's not a numeric identifier.
-				if (identifier.startsWith("C"))
+				if (COSMICUpdateUtil.stringStartsWithC(identifier))
 				{
 					updates.compute(updater.getIdentifier(), listPopulator );
 					
@@ -324,7 +324,7 @@ public class COSMICUpdateUtil
 				// Include a COSMIC Search URL for the identifier in the report, to make it easier for Curators to follow up on identifiers that might need attention.
 				String url;
 				String identifierForUrl = "";
-				if (record.getIdentifier().startsWith("C"))
+				if (COSMICUpdateUtil.stringStartsWithC(record.getIdentifier()))
 				{
 					identifierForUrl = record.getIdentifier();
 				}
@@ -353,5 +353,10 @@ public class COSMICUpdateUtil
 	public static synchronized void setReportsDirectoryPath(String reportsDirectoryPath)
 	{
 		COSMICUpdateUtil.reportsDirectoryPath = reportsDirectoryPath;
+	}
+	
+	public static boolean stringStartsWithC(String s)
+	{
+		return s.startsWith("C");
 	}
 }

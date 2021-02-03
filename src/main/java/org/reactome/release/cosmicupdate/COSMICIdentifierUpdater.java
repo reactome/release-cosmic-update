@@ -144,7 +144,7 @@ public class COSMICIdentifierUpdater implements Comparable<COSMICIdentifierUpdat
 			String currentIdentifier = (String) identifierObject.getAttributeValue(ReactomeJavaConstants.identifier);
 			// If the current identifier already begins with "C" then leave it alone.
 			// This code is for updating numeric identifiers that have a suggested prefix.
-			if (!currentIdentifier.toUpperCase().startsWith("C"))
+			if (!COSMICUpdateUtil.stringStartsWithC(currentIdentifier.toUpperCase()))
 			{
 				// Create the InstanceEdit, if necessary.
 				synchronized (COSMICIdentifierUpdater.class)
