@@ -59,7 +59,7 @@ public class COSMICUpdateUtil
 	 * Validate the identifiers in the database by comparing them to the identifiers in the file.
 	 * @param updaters A map of updaters, keyed by COSMIC identifier.
 	 * @param COSMICFusionExportFile The path to the COSMIC Fusion Export file.
-	 * @param COSMICMutationTrackingFile The path o the COSMIC Mutation Tracking file.
+	 * @param COSMICMutationTrackingFile The path to the COSMIC Mutation Tracking file.
 	 * @param COSMICMutantExportFile The path to the COMSIC Mutant Export file.
 	 * @throws IOException
 	 * @throws FileNotFoundException
@@ -147,7 +147,7 @@ public class COSMICUpdateUtil
 		// Create the reports directory if it's missing.
 		Files.createDirectories(Paths.get(COSMICUpdateUtil.reportsDirectoryPath));
 		
-		try(CSVPrinter nonEWASPrinter = new CSVPrinter(new FileWriter(COSMICUpdateUtil.reportsDirectoryPath + File.separator + "nonEWASObjectsWithCOSMICIdentifiers_"+dateSuffix+".csv"), CSVFormat.DEFAULT.withHeader("COSMIC identifier", "Referred-to-by CadidateSet (or other non-EWAS)"));
+		try(CSVPrinter nonEWASPrinter = new CSVPrinter(new FileWriter(COSMICUpdateUtil.reportsDirectoryPath + File.separator + "nonEWASObjectsWithCOSMICIdentifiers_"+dateSuffix+".csv"), CSVFormat.DEFAULT.withHeader("COSMIC identifier", "non-EWAS entity"));
 			CSVPrinter identifiersWithNoReferrerPrinter = new CSVPrinter(new FileWriter(COSMICUpdateUtil.reportsDirectoryPath  + File.separator + "COSMICIdentifiersNoReferrers_"+dateSuffix+".csv"), CSVFormat.DEFAULT.withHeader("COSMIC identifier")))
 		{
 			for (GKInstance cosmicObject : cosmicObjects)
@@ -302,16 +302,6 @@ public class COSMICUpdateUtil
 		
 		@SuppressWarnings("unchecked")
 		Collection<GKInstance> cosmicObjects = adaptor.fetchInstanceByAttribute(ReactomeJavaConstants.DatabaseIdentifier, ReactomeJavaConstants.referenceDatabase, " = ", cosmicRefDB.getAttributeValue(ReactomeJavaConstants.DB_ID));
-		
-//		for (GKInstance inst : cosmicObjects)
-//		{
-//			String identifier = (String) inst.getAttributeValue(ReactomeJavaConstants.identifier);
-//			Collection<GKInstance> identifiedBy = adaptor.fetchInstanceByAttribute(inst.getSchemClass().getName(), ReactomeJavaConstants.identifier, " = ", identifier);
-//			if (identifiedBy.size() > 1)
-//			{
-//				logger.info("Identifier {} identifies {} objects: {}", identifier, identifiedBy.size(), identifiedBy.toString());
-//			}
-//		}
 		
 		return cosmicObjects;
 	}

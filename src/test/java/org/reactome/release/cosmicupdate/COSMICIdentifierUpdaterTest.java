@@ -102,7 +102,7 @@ public class COSMICIdentifierUpdaterTest
 		COSMICIdentifierUpdater updater = new COSMICIdentifierUpdater();
 		updater.setIdentifier("123456");
 		updater.setSuggestedPrefix("COSM");
-		// testing COSM so don't set a COSV identiefier.
+		// testing COSM so don't set a COSV identifier.
 		updater.setValid(true);
 		updater.setDbID(123465789L);
 		
