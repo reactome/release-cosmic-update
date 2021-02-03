@@ -215,7 +215,7 @@ public class COSMICUpdateUtil
 	 */
 	private static void checkEWASes(CSVPrinter nonEWASPrinter, String identifier, COSMICIdentifierUpdater updater, Collection<GKInstance> EWASes) throws InvalidAttributeException, Exception, IOException
 	{
-		String prefix = null;
+		String prefix;
 		GKInstance[] EWASArray = EWASes.toArray(new GKInstance[0]);
 		boolean done = false;
 		int i = 0;
@@ -241,7 +241,7 @@ public class COSMICUpdateUtil
 				nonEWASPrinter.printRecord(identifier, ewas.toString());
 			}
 			i++;
-			done = foundMismatchedRefSequence || i <= EWASArray.length;
+			done = foundMismatchedRefSequence || i >= EWASArray.length;
 		}
 	}
 
