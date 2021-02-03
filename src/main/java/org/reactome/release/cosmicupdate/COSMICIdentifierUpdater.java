@@ -23,10 +23,10 @@ import org.reactome.release.common.database.InstanceEditUtils;
 public class COSMICIdentifierUpdater implements Comparable<COSMICIdentifierUpdater>
 {
 	private static final Logger logger = LogManager.getLogger();
-	private static GKInstance updateWithNewCOSV;
-	private static GKInstance updatePrependCOSM;
+	private static GKInstance instanceEditNewCOSV;
+	private static GKInstance instanceEditPrependCOSM;
 	private String identifier;
-	private Long dbID;
+	private long dbID;
 	private String suggestedPrefix;
 	private boolean valid;
 	private Set<String> mutationIDs = new HashSet<>();
@@ -40,11 +40,11 @@ public class COSMICIdentifierUpdater implements Comparable<COSMICIdentifierUpdat
 	{
 		this.identifier = identifier;
 	}
-	public Long getDbID()
+	public long getDbID()
 	{
 		return dbID;
 	}
-	public void setDbID(Long dbID)
+	public void setDbID(long dbID)
 	{
 		this.dbID = dbID;
 	}
@@ -89,7 +89,7 @@ public class COSMICIdentifierUpdater implements Comparable<COSMICIdentifierUpdat
 					+ this.getSuggestedPrefix() + "; "
 					+ this.isValid() + "; "
 					+ this.getCosvIdentifier() + "; ("
-					+ this.getMutationIDs().stream().reduce("", (s, t) -> s + t + ",") + ")" + "]";
+					+ String.join(",", this.getMutationIDs()) + ")" + "]";
 	}
 	
 	/**
@@ -128,14 +128,14 @@ public class COSMICIdentifierUpdater implements Comparable<COSMICIdentifierUpdat
 			// Create the InstanceEdit, if necessary.
 			synchronized (COSMICIdentifierUpdater.class)
 			{
-				if (COSMICIdentifierUpdater.updateWithNewCOSV == null)
+				if (COSMICIdentifierUpdater.instanceEditNewCOSV == null)
 				{
-					COSMICIdentifierUpdater.updateWithNewCOSV = InstanceEditUtils.createDefaultIE(adaptor, creatorID, true, "Identifier was automatically updated to new \"COSV\" identifier by COSMIC Update process.");
+					COSMICIdentifierUpdater.instanceEditNewCOSV = InstanceEditUtils.createDefaultIE(adaptor, creatorID, true, "Identifier was automatically updated to new \"COSV\" identifier by COSMIC Update process.");
 				}
 			}
 			GKInstance identifierObject = adaptor.fetchInstance( this.getDbID());
 			
-			updateIdentifierObject(adaptor, COSMICIdentifierUpdater.updateWithNewCOSV, identifierObject, this.getCosvIdentifier());
+			updateIdentifierObject(adaptor, COSMICIdentifierUpdater.instanceEditNewCOSV, identifierObject, this.getCosvIdentifier());
 		}
 		// If no COSV identifier was found, update using the suggested prefix (determined computationally).
 		else if (this.getSuggestedPrefix() != null && this.getSuggestedPrefix().equalsIgnoreCase(COSMICUpdateUtil.COSMIC_LEGACY_PREFIX))
@@ -149,12 +149,12 @@ public class COSMICIdentifierUpdater implements Comparable<COSMICIdentifierUpdat
 				// Create the InstanceEdit, if necessary.
 				synchronized (COSMICIdentifierUpdater.class)
 				{
-					if (COSMICIdentifierUpdater.updatePrependCOSM == null)
+					if (COSMICIdentifierUpdater.instanceEditPrependCOSM == null)
 					{
-						COSMICIdentifierUpdater.updatePrependCOSM = InstanceEditUtils.createDefaultIE(adaptor, creatorID, true, "Identifier was automatically prepended with \"COSM\" by COSMIC Update process.");
+						COSMICIdentifierUpdater.instanceEditPrependCOSM = InstanceEditUtils.createDefaultIE(adaptor, creatorID, true, "Identifier was automatically prepended with \"COSM\" by COSMIC Update process.");
 					}
 				}
-				updateIdentifierObject(adaptor, COSMICIdentifierUpdater.updatePrependCOSM, identifierObject, this.getSuggestedPrefix() + currentIdentifier);
+				updateIdentifierObject(adaptor, COSMICIdentifierUpdater.instanceEditPrependCOSM, identifierObject, this.getSuggestedPrefix() + currentIdentifier);
 			}
 		}
 		// Some identifiers won't have a COSV identifier in the COSMIC files, and they might not have a suggested prefix either.

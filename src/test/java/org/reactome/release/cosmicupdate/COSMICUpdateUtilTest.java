@@ -10,6 +10,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -26,6 +27,15 @@ import org.mockito.Mockito;
 public class COSMICUpdateUtilTest
 {
 
+	private static final String IDENTIFIER_COSF1234 = "COSF1234";
+	private static final String IDENTIFIER_1234 = "1234";
+	private static final long DBID_1235 = 1235L;
+	private static final long DBID_1234 = 1234L;
+	private static final String IDENTIFIER_COSM1111 = "COSM1111";
+	private static final String IDENTIFIER_44444 = "44444";
+	private static final String IDENTIFIER_5678 = "5678";
+	private static final String IDENTIFIER_COSF6321 = "COSF6321";
+	private static final String IDENTIFIER_COSF7890 = "COSF7890";
 	private String COSMICFusionExportFile = null;
 	private String COSMICMutationTrackingFile = null;
 	private String COSMICMutantExportFile = null;
@@ -73,22 +83,22 @@ public class COSMICUpdateUtilTest
 		this.COSMICFusionExportFile = pathToCOSF.toString();
 		// we only use the FUSION_ID field from the COSMIC Fusion Export.
 		Files.writeString(pathToCOSF, "FUSION_ID\n");
-		Files.writeString(pathToCOSF, "1234\n", StandardOpenOption.APPEND);
-		Files.writeString(pathToCOSF, "COSF6321\n", StandardOpenOption.APPEND);
-		Files.writeString(pathToCOSF, "COSF7890\n", StandardOpenOption.APPEND);
+		Files.writeString(pathToCOSF, IDENTIFIER_1234+"\n", StandardOpenOption.APPEND);
+		Files.writeString(pathToCOSF, IDENTIFIER_COSF6321+"\n", StandardOpenOption.APPEND);
+		Files.writeString(pathToCOSF, IDENTIFIER_COSF7890+"\n", StandardOpenOption.APPEND);
 	}
 	
 	
 	@Test
 	public void testValidateAgainstFiles()
 	{
-		Map<String, COSMICIdentifierUpdater> updates = new HashMap<>();
+		Map<String, List<COSMICIdentifierUpdater>> updates = new HashMap<>();
 		
 		COSMICIdentifierUpdater updater1 = new COSMICIdentifierUpdater();
 		COSMICIdentifierUpdater updater2 = new COSMICIdentifierUpdater();
-		updates.put("1234", updater1);
-		updates.put("COSF1234", updater1);
-		updates.put("5678", updater2);
+		updates.put(IDENTIFIER_1234, Arrays.asList(updater1));
+		updates.put(IDENTIFIER_COSF1234, Arrays.asList(updater1));
+		updates.put(IDENTIFIER_5678, Arrays.asList(updater2));
 		
 		try
 		{
@@ -125,28 +135,28 @@ public class COSMICUpdateUtilTest
 		SchemaClass mockFragInsertSchemaClass = Mockito.mock(SchemaClass.class);
 		
 		// set up mock object - will not have any EWASes
-		Mockito.when(mockCosmicObject.getAttributeValue(ReactomeJavaConstants.identifier)).thenReturn("5678");
-		Mockito.when(mockCosmicObject2.getAttributeValue(ReactomeJavaConstants.identifier)).thenReturn("44444");
+		Mockito.when(mockCosmicObject.getAttributeValue(ReactomeJavaConstants.identifier)).thenReturn(IDENTIFIER_5678);
+		Mockito.when(mockCosmicObject2.getAttributeValue(ReactomeJavaConstants.identifier)).thenReturn(IDENTIFIER_44444);
 		// object 3 has no EWASes
 		Mockito.when(mockCosmicObject3.getAttributeValue(ReactomeJavaConstants.crossReference)).thenReturn(null);
-		Mockito.when(mockCosmicObject3.getAttributeValue(ReactomeJavaConstants.identifier)).thenReturn("COSM1111");
+		Mockito.when(mockCosmicObject3.getAttributeValue(ReactomeJavaConstants.identifier)).thenReturn(IDENTIFIER_COSM1111);
 		
 		// set up an EWAS for second mock object
 		Mockito.when(mockEWASSchemaClass.getName()).thenReturn(ReactomeJavaConstants.EntityWithAccessionedSequence);
 		Mockito.when(mockEWAS.getSchemClass()).thenReturn(mockEWASSchemaClass);
-		Mockito.when(mockRefSeq.getDBID()).thenReturn(1234L);
+		Mockito.when(mockRefSeq.getDBID()).thenReturn(DBID_1234);
 		// mismatch here on DBID should trigger a COSF prefix suggestion.
-		Mockito.when(mockRefSeq2.getDBID()).thenReturn(1235L);
+		Mockito.when(mockRefSeq2.getDBID()).thenReturn(DBID_1235);
 		Mockito.when(mockEWAS.getAttributeValue(ReactomeJavaConstants.referenceEntity)).thenReturn(mockRefSeq).thenReturn(mockRefSeq2);
 		// need modified residues
 		Mockito.when(mockFragReplaceSchemaClass.getName()).thenReturn(ReactomeJavaConstants.FragmentReplacedModification);
 		Mockito.when(mockModResidue.getSchemClass()).thenReturn(mockFragReplaceSchemaClass);
-		Mockito.when(mockModResidue.getDBID()).thenReturn(1234L);
+		Mockito.when(mockModResidue.getDBID()).thenReturn(DBID_1234);
 		Mockito.when(mockFragInsertSchemaClass.getName()).thenReturn(ReactomeJavaConstants.FragmentInsertionModification);
 		Mockito.when(mockModResidue2.getSchemClass()).thenReturn(mockFragInsertSchemaClass);
-		Mockito.when(mockModResidue2.getDBID()).thenReturn(1234L);
-		Mockito.when(mockResiduRefSeq.getDBID()).thenReturn(1234L);
-		Mockito.when(mockResiduRefSeq2.getDBID()).thenReturn(1234L);
+		Mockito.when(mockModResidue2.getDBID()).thenReturn(DBID_1234);
+		Mockito.when(mockResiduRefSeq.getDBID()).thenReturn(DBID_1234);
+		Mockito.when(mockResiduRefSeq2.getDBID()).thenReturn(DBID_1234);
 		Mockito.when(mockModResidue.getAttributeValue(ReactomeJavaConstants.referenceSequence)).thenReturn(mockResiduRefSeq);
 		Mockito.when(mockModResidue2.getAttributeValue(ReactomeJavaConstants.referenceSequence)).thenReturn(mockResiduRefSeq2);
 		Mockito.when(mockEWAS.getAttributeValuesList(ReactomeJavaConstants.hasModifiedResidue)).thenReturn(mockModResidues);
@@ -175,22 +185,22 @@ public class COSMICUpdateUtilTest
 		COSMICUpdateUtil.setReportsDirectoryPath(reportPath.toAbsolutePath().toString());
 		System.out.println("Reports will be in " + reportPath.toAbsolutePath().toString());
 		// test with list
-		Map<String, COSMICIdentifierUpdater> result = COSMICUpdateUtil.determinePrefixes(cosmicObjects);
+		Map<String, List<COSMICIdentifierUpdater>> result = COSMICUpdateUtil.determinePrefixes(cosmicObjects);
 		assertNotNull(result);
 		assertTrue(!result.isEmpty());
 		
 		for (String s : result.keySet())
 		{
 			System.out.println(s + "\t" + result.get(s).toString());
-			if (s.contains("44444"))
+			if (s.contains(IDENTIFIER_44444))
 			{
 				// The 44444 COSMIC object should get COSF because of mismatch in one of the modified residues.
-				assertTrue(result.get(s).getSuggestedPrefix().equals("COSF"));
+				assertTrue(result.get(s).get(0).getSuggestedPrefix().equals("COSF"));
 			}
-			if (s.contains("5678"))
+			if (s.contains(IDENTIFIER_5678))
 			{
 				// This should have a COSM prefix.
-				assertTrue(result.get(s).getSuggestedPrefix().equals("COSM"));
+				assertTrue(result.get(s).get(0).getSuggestedPrefix().equals("COSM"));
 			}
 		}
 		COSMICUpdateUtil.printIdentifierUpdateReport(result);

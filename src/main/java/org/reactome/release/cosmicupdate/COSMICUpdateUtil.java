@@ -1,5 +1,6 @@
 package org.reactome.release.cosmicupdate;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
@@ -9,11 +10,13 @@ import java.nio.file.Paths;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
 import org.apache.commons.csv.CSVFormat;
@@ -61,21 +64,37 @@ public class COSMICUpdateUtil
 	 * @throws IOException
 	 * @throws FileNotFoundException
 	 */
-	static void validateIdentifiersAgainstFiles(Map<String, COSMICIdentifierUpdater> updaters, String COSMICFusionExportFile, String COSMICMutationTrackingFile, String COSMICMutantExportFile) throws IOException, FileNotFoundException
+	static void validateIdentifiersAgainstFiles(Map<String, List<COSMICIdentifierUpdater>> updaters, String COSMICFusionExportFile, String COSMICMutationTrackingFile, String COSMICMutantExportFile) throws IOException, FileNotFoundException
 	{
-		Set<String> fusionIDs = updaters.keySet().parallelStream().filter(id -> id.toUpperCase().startsWith(COSMIC_FUSION_PREFIX)).map(id -> id.toUpperCase().replaceAll(COSMIC_FUSION_PREFIX,"") ).collect(Collectors.toSet());
-		logger.info("Now checking with CosmicFusionExport.tsv...");
-		try(CSVParser parser = new CSVParser(new FileReader(COSMICFusionExportFile), CSVFormat.DEFAULT.withFirstRecordAsHeader().withDelimiter('\t')); )
+		validateAgainstCosmicFusionExport(updaters, COSMICFusionExportFile);
+		validateAgainstCosmicMutationTracking(updaters, COSMICMutationTrackingFile);
+		validateAgainstCosmicMutantExport(updaters, COSMICMutantExportFile);
+	}
+	
+	private static void validateAgainstCosmicMutantExport(Map<String, List<COSMICIdentifierUpdater>> updaters, String COSMICMutantExportFile) throws IOException, FileNotFoundException
+	{
+		logger.info("Now checking with CosmicMutantExport.tsv...");
+		try(CSVParser parser = new CSVParser(new FileReader(COSMICMutantExportFile), CSVFormat.DEFAULT.withFirstRecordAsHeader().withDelimiter('\t')); )
 		{
-			parser.forEach( record -> {
-				String fusionID = record.get(COSMIC_FUSION_ID);
-				if (fusionIDs.contains(fusionID))
+			parser.forEach(record -> {
+				String legacyID = record.get(COSMIC_LEGACY_MUTATION_ID);
+				String mutationID = record.get(COSMIC_MUTATION_ID);
+				String genomicID = record.get(COSMIC_GENOMIC_MUTATION_ID);
+				if (updaters.containsKey(legacyID))
 				{
-					updaters.get(COSMIC_FUSION_PREFIX+fusionID).setValid(true);
+					updaters.get(legacyID).forEach(updater -> {
+						updater.setValid(true); // only VALID if in MutantExport...
+						updater.getMutationIDs().add(mutationID);
+						updater.setCosvIdentifier(genomicID);
+					});
+
 				}
 			});
 		}
-		
+	}
+
+	private static void validateAgainstCosmicMutationTracking(Map<String, List<COSMICIdentifierUpdater>> updaters, String COSMICMutationTrackingFile) throws IOException, FileNotFoundException
+	{
 		logger.info("Now checking with CosmicMutationTracking.tsv...");
 		// Now we need to look through the HUGE file from COSMIC and see if we can map the identifiers...
 		try(CSVParser parser = new CSVParser(new FileReader(COSMICMutationTrackingFile), CSVFormat.DEFAULT.withFirstRecordAsHeader().withDelimiter('\t'));)
@@ -86,24 +105,27 @@ public class COSMICUpdateUtil
 				String genomicID = record.get(COSMIC_GENOMIC_MUTATION_ID);
 				if (updaters.containsKey(legacyID))
 				{
-					updaters.get(legacyID).getMutationIDs().add(mutationID);
-					updaters.get(legacyID).setCosvIdentifier(genomicID);
+					updaters.get(legacyID).forEach(updater -> {
+						updater.getMutationIDs().add(mutationID);
+						updater.setCosvIdentifier(genomicID);
+					});
 				}
 			
 			});
 		}
-		logger.info("Now checking with CosmicMutantExport.tsv...");
-		try(CSVParser parser = new CSVParser(new FileReader(COSMICMutantExportFile), CSVFormat.DEFAULT.withFirstRecordAsHeader().withDelimiter('\t')); )
+	}
+
+	private static void validateAgainstCosmicFusionExport(Map<String, List<COSMICIdentifierUpdater>> updaters, String COSMICFusionExportFile) throws IOException, FileNotFoundException
+	{
+		Set<String> fusionIDs = updaters.keySet().parallelStream().filter(id -> id.toUpperCase().startsWith(COSMIC_FUSION_PREFIX)).map(id -> id.toUpperCase().replace(COSMIC_FUSION_PREFIX,"") ).collect(Collectors.toSet());
+		logger.info("Now checking with CosmicFusionExport.tsv...");
+		try(CSVParser parser = new CSVParser(new FileReader(COSMICFusionExportFile), CSVFormat.DEFAULT.withFirstRecordAsHeader().withDelimiter('\t')); )
 		{
-			parser.forEach(record -> {
-				String legacyID = record.get(COSMIC_LEGACY_MUTATION_ID);
-				String mutationID = record.get(COSMIC_MUTATION_ID);
-				String genomicID = record.get(COSMIC_GENOMIC_MUTATION_ID);
-				if (updaters.containsKey(legacyID))
+			parser.forEach( record -> {
+				String fusionID = record.get(COSMIC_FUSION_ID);
+				if (fusionIDs.contains(fusionID))
 				{
-					updaters.get(legacyID).setValid(true); // only VALID if in MutantExport...
-					updaters.get(legacyID).getMutationIDs().add(mutationID);
-					updaters.get(legacyID).setCosvIdentifier(genomicID);
+					updaters.get(COSMIC_FUSION_PREFIX+fusionID).forEach(updater -> updater.setValid(true));
 				}
 			});
 		}
@@ -119,29 +141,24 @@ public class COSMICUpdateUtil
 	 * @throws Exception
 	 * @throws IOException
 	 */
-	static Map<String, COSMICIdentifierUpdater> determinePrefixes(Collection<GKInstance> cosmicObjects) throws InvalidAttributeException, Exception, IOException
+	static Map<String, List<COSMICIdentifierUpdater>> determinePrefixes(Collection<GKInstance> cosmicObjects) throws InvalidAttributeException, Exception, IOException
 	{
-		Map<String, COSMICIdentifierUpdater> updates = new HashMap<>();
-		
+		Map<String, List<COSMICIdentifierUpdater>> updates = new HashMap<>();
 		// Create the reports directory if it's missing.
-		if (!Files.exists(Paths.get(COSMICUpdateUtil.reportsDirectoryPath)))
-		{
-			Files.createDirectories(Paths.get(COSMICUpdateUtil.reportsDirectoryPath));
-		}
+		Files.createDirectories(Paths.get(COSMICUpdateUtil.reportsDirectoryPath));
 		
-		try(CSVPrinter nonEWASPrinter = new CSVPrinter(new FileWriter(COSMICUpdateUtil.reportsDirectoryPath + "/nonEWASObjectsWithCOSMICIdentifiers_"+dateSuffix+".csv"), CSVFormat.DEFAULT.withHeader("COSMIC identifier", "Referred-to-by CadidateSet (or other non-EWAS)"));
-			CSVPrinter identifiersWithNoReferrerPrinter = new CSVPrinter(new FileWriter(COSMICUpdateUtil.reportsDirectoryPath + "/COSMICIdentifiersNoReferrers_"+dateSuffix+".csv"), CSVFormat.DEFAULT.withHeader("COSMIC identifier")))
+		try(CSVPrinter nonEWASPrinter = new CSVPrinter(new FileWriter(COSMICUpdateUtil.reportsDirectoryPath + File.separator + "nonEWASObjectsWithCOSMICIdentifiers_"+dateSuffix+".csv"), CSVFormat.DEFAULT.withHeader("COSMIC identifier", "Referred-to-by CadidateSet (or other non-EWAS)"));
+			CSVPrinter identifiersWithNoReferrerPrinter = new CSVPrinter(new FileWriter(COSMICUpdateUtil.reportsDirectoryPath  + File.separator + "COSMICIdentifiersNoReferrers_"+dateSuffix+".csv"), CSVFormat.DEFAULT.withHeader("COSMIC identifier")))
 		{
-			for (GKInstance inst : cosmicObjects)
+			for (GKInstance cosmicObject : cosmicObjects)
 			{
-				String identifier = (String)inst.getAttributeValue(ReactomeJavaConstants.identifier);
-			
+				String identifier = (String)cosmicObject.getAttributeValue(ReactomeJavaConstants.identifier);
 				COSMICIdentifierUpdater updater = new COSMICIdentifierUpdater();
 				updater.setIdentifier(identifier);
-				updater.setDbID(inst.getDBID());
+				updater.setDbID(cosmicObject.getDBID());
 
 				@SuppressWarnings("unchecked")
-				Collection<GKInstance> EWASes = inst.getReferers(ReactomeJavaConstants.crossReference);
+				Collection<GKInstance> EWASes = cosmicObject.getReferers(ReactomeJavaConstants.crossReference);
 				// If NO EWASes exist, then log this information.
 				if (EWASes == null || EWASes.isEmpty())
 				{
@@ -154,15 +171,31 @@ public class COSMICUpdateUtil
 					checkEWASes(nonEWASPrinter, identifier, updater, EWASes);
 				}
 				
+				// support function for populating list.
+				BiFunction<? super String, ? super List<COSMICIdentifierUpdater>, ? extends List<COSMICIdentifierUpdater>> listPopulator = (k,v) -> {
+					if (v == null)
+					{
+						List<COSMICIdentifierUpdater> updaters = new ArrayList<>();
+						updaters.add(updater);
+						return updaters;
+					}
+					else
+					{
+						v.add(updater);
+						return v;
+					}
+				};
+				
 				// If the identifier starts with C it's not a numeric identifier.
 				if (identifier.startsWith("C"))
 				{
-					// Consider: is it possible that we might get 1:n mapping for some identifier?
-					updates.put(updater.getIdentifier(), updater);
+					updates.compute(updater.getIdentifier(), listPopulator );
+					
 				}
 				else
 				{
-					updates.put(updater.getSuggestedPrefix() + updater.getIdentifier(), updater);
+
+					updates.compute(updater.getSuggestedPrefix() + updater.getIdentifier(), listPopulator );
 				}
 			}
 		}
@@ -175,16 +208,21 @@ public class COSMICUpdateUtil
 	 * @param nonEWASPrinter CSVPrinter for reporting.
 	 * @param identifier Identifier of the object being checked, used for reporting.
 	 * @param updater A COSMICIdentifierUpdater whose suggested prefix will be updated.
-	 * @param EWASes The EWASes to check.
+	 * @param EWASes The EWASes to check. If a non-EWAS is in this list, it will be reported.
 	 * @throws InvalidAttributeException
 	 * @throws Exception
 	 * @throws IOException
 	 */
 	private static void checkEWASes(CSVPrinter nonEWASPrinter, String identifier, COSMICIdentifierUpdater updater, Collection<GKInstance> EWASes) throws InvalidAttributeException, Exception, IOException
 	{
-		String prefix;
-		for (GKInstance ewas : EWASes)
+		String prefix = null;
+		GKInstance[] EWASArray = EWASes.toArray(new GKInstance[0]);
+		boolean done = false;
+		int i = 0;
+		while(!done)
 		{
+			boolean foundMismatchedRefSequence = false;
+			GKInstance ewas = EWASArray[i];
 			if (ewas.getSchemClass().getName().equals(ReactomeJavaConstants.EntityWithAccessionedSequence))
 			{
 				GKInstance refSequence = (GKInstance) ewas.getAttributeValue(ReactomeJavaConstants.referenceEntity);
@@ -192,9 +230,9 @@ public class COSMICUpdateUtil
 				@SuppressWarnings("unchecked")
 				List<GKInstance> modResidues = (List<GKInstance>) ewas.getAttributeValuesList(ReactomeJavaConstants.hasModifiedResidue);
 				
-				boolean foundMismatchedRefSequence = referenceSequenceMismatchesResidues(refSequence, modResidues);
+				foundMismatchedRefSequence = referenceSequenceMismatchesResidues(refSequence, modResidues);
 				
-				// If we get to the end of the loop and there is a mismatch, then COSF.
+				// If there is any mismatch, then COSF.
 				prefix = foundMismatchedRefSequence ? COSMIC_FUSION_PREFIX : COSMIC_LEGACY_PREFIX;
 				updater.setSuggestedPrefix(prefix);
 			}
@@ -202,6 +240,8 @@ public class COSMICUpdateUtil
 			{
 				nonEWASPrinter.printRecord(identifier, ewas.toString());
 			}
+			i++;
+			done = foundMismatchedRefSequence || i <= EWASArray.length;
 		}
 	}
 
@@ -256,13 +296,23 @@ public class COSMICUpdateUtil
 		}
 		else
 		{
-			logger.error("Wrong number of COSMIC refDBs: {} ; only 1 was expected.", refDBs.size());
-			logger.error("Cannot proceeed!");
+			logger.fatal("Wrong number of \"COSMIC\" refDBs: {} ; only 1 was expected. Cannot proceed.", refDBs.size());
 			System.exit(1);
 		}
 		
 		@SuppressWarnings("unchecked")
 		Collection<GKInstance> cosmicObjects = adaptor.fetchInstanceByAttribute(ReactomeJavaConstants.DatabaseIdentifier, ReactomeJavaConstants.referenceDatabase, " = ", cosmicRefDB.getAttributeValue(ReactomeJavaConstants.DB_ID));
+		
+//		for (GKInstance inst : cosmicObjects)
+//		{
+//			String identifier = (String) inst.getAttributeValue(ReactomeJavaConstants.identifier);
+//			Collection<GKInstance> identifiedBy = adaptor.fetchInstanceByAttribute(inst.getSchemClass().getName(), ReactomeJavaConstants.identifier, " = ", identifier);
+//			if (identifiedBy.size() > 1)
+//			{
+//				logger.info("Identifier {} identifies {} objects: {}", identifier, identifiedBy.size(), identifiedBy.toString());
+//			}
+//		}
+		
 		return cosmicObjects;
 	}
 	
@@ -273,16 +323,13 @@ public class COSMICUpdateUtil
 	 * @param updaters The map of identifier updaters.
 	 * @throws IOException
 	 */
-	public static void printIdentifierUpdateReport(Map<String, COSMICIdentifierUpdater> updaters) throws IOException
+	public static void printIdentifierUpdateReport(Map<String, List<COSMICIdentifierUpdater>> updaters) throws IOException
 	{
 		// Create the reports directory if it's missing.
-		if (!Files.exists(Paths.get(COSMICUpdateUtil.reportsDirectoryPath)))
-		{
-			Files.createDirectories(Paths.get(COSMICUpdateUtil.reportsDirectoryPath));
-		}
+		Files.createDirectories(Paths.get(COSMICUpdateUtil.reportsDirectoryPath));
 		try(CSVPrinter printer = new CSVPrinter(new FileWriter(COSMICUpdateUtil.reportsDirectoryPath + "/COSMIC-identifiers-report_"+dateSuffix+".csv"), CSVFormat.DEFAULT.withHeader("DB_ID", "Identifier", "Suggested Prefix", "Valid (according to COSMIC files)?", "COSV identifier", "Mutation IDs", "COSMIC Search URL")))
 		{
-			for (COSMICIdentifierUpdater record : updaters.values().parallelStream().sorted().collect(Collectors.toList()))
+			for (COSMICIdentifierUpdater record : updaters.values().parallelStream().flatMap(Collection::stream).sorted().collect(Collectors.toList()))
 			{
 				// Include a COSMIC Search URL for the identifier in the report, to make it easier for Curators to follow up on identifiers that might need attention.
 				String url;
@@ -308,12 +355,12 @@ public class COSMICUpdateUtil
 		}
 	}
 
-	public synchronized static String getReportsDirectoryPath()
+	public static synchronized String getReportsDirectoryPath()
 	{
 		return reportsDirectoryPath;
 	}
 
-	public synchronized static void setReportsDirectoryPath(String reportsDirectoryPath)
+	public static synchronized void setReportsDirectoryPath(String reportsDirectoryPath)
 	{
 		COSMICUpdateUtil.reportsDirectoryPath = reportsDirectoryPath;
 	}

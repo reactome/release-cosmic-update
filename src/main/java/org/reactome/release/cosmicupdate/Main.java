@@ -36,7 +36,8 @@ public class Main extends ReleaseStep
 	@Parameter(names = {"-d"}, converter = DurationConverter.class,
 			description = "Download the files, if the age of local files exceeds the specified max age, or if the files don't exist."
 					+ "Omitting this parameter means download will not occur. Specifying -d with a 0 value will force a download."
-					+ "Format for a Duration can be found here: https://docs.oracle.com/javase/8/docs/api/java/time/Duration.html#parse-java.lang.CharSequence-")
+					+ "Format for a Duration can be found here: https://docs.oracle.com/javase/8/docs/api/java/time/Duration.html#parse-java.lang.CharSequence-"
+					+ " Example: PT48H == \"48 hours\"")
 	private Duration fileAge;
 	
 	private static String COSMICMutantExport;
@@ -104,15 +105,15 @@ public class Main extends ReleaseStep
 		{
 			logger.info("User has specified that update process should run.");
 			
-			// first thing, check the files and unzip them if necessary.
-			GUnzipCallable unzipper1 = new GUnzipCallable(Paths.get(Main.COSMICFusionExport + ".gz"), Paths.get(Main.COSMICFusionExport));
-			GUnzipCallable unzipper2 = new GUnzipCallable(Paths.get(Main.COSMICMutantExport + ".gz"), Paths.get(Main.COSMICMutantExport));
-			GUnzipCallable unzipper3 = new GUnzipCallable(Paths.get(Main.COSMICMutationTracking + ".gz"), Paths.get(Main.COSMICMutationTracking));
-			
-			ExecutorService execService = Executors.newCachedThreadPool();
-			// The files are large and it could be slow to unzip them sequentially, so we will unzip them in parallel.
-			execService.invokeAll(Arrays.asList(unzipper1, unzipper2, unzipper3));
-			execService.shutdown();
+//			// first thing, check the files and unzip them if necessary.
+//			GUnzipCallable unzipper1 = new GUnzipCallable(Paths.get(Main.COSMICFusionExport + ".gz"), Paths.get(Main.COSMICFusionExport));
+//			GUnzipCallable unzipper2 = new GUnzipCallable(Paths.get(Main.COSMICMutantExport + ".gz"), Paths.get(Main.COSMICMutantExport));
+//			GUnzipCallable unzipper3 = new GUnzipCallable(Paths.get(Main.COSMICMutationTracking + ".gz"), Paths.get(Main.COSMICMutationTracking));
+//			
+//			ExecutorService execService = Executors.newCachedThreadPool();
+//			// The files are large and it could be slow to unzip them sequentially, so we will unzip them in parallel.
+//			execService.invokeAll(Arrays.asList(unzipper1, unzipper2, unzipper3));
+//			execService.shutdown();
 			
 			MySQLAdaptor adaptor = ReleaseStep.getMySQLAdaptorFromProperties(props);
 			loadTestModeFromProperties(props);
@@ -132,7 +133,7 @@ public class Main extends ReleaseStep
 			}).collect(Collectors.toList());
 			logger.info("{} filtered COSMIC identifiers", filteredCosmicObjects.size());
 	
-			Map<String, COSMICIdentifierUpdater> updaters = COSMICUpdateUtil.determinePrefixes(filteredCosmicObjects);
+			Map<String, List<COSMICIdentifierUpdater>> updaters = COSMICUpdateUtil.determinePrefixes(filteredCosmicObjects);
 			
 			COSMICUpdateUtil.validateIdentifiersAgainstFiles(updaters, COSMICFusionExport, COSMICMutationTracking, COSMICMutantExport);
 			COSMICUpdateUtil.printIdentifierUpdateReport(updaters);
@@ -148,11 +149,11 @@ public class Main extends ReleaseStep
 	 * an IllegalArgumentException is thrown.
 	 * @param value The value to check
 	 * @param message The message that will be put into the IllegalArgumentException
-	 * @throws IllegalArgumentException If value == null || value.isBlank() || value.isEmpty()
+	 * @throws IllegalArgumentException If value == null || value.isEmpty()
 	 */
 	private void validateConfigValue(String value, String message)
 	{
-		if (value == null || value.isBlank() || value.isEmpty())
+		if (value == null || value.trim().isEmpty())
 		{
 			throw new IllegalArgumentException(message);
 		}
@@ -235,20 +236,30 @@ public class Main extends ReleaseStep
 	 * @param updates
 	 * @throws Exception 
 	 */
-	private static void updateIdentifiers(MySQLAdaptor adaptor, Map<String, COSMICIdentifierUpdater> updates) throws Exception
+	private static void updateIdentifiers(MySQLAdaptor adaptor, Map<String, List<COSMICIdentifierUpdater>> updates) throws Exception
 	{
-		for (COSMICIdentifierUpdater updater : updates.values())
+		for (List<COSMICIdentifierUpdater> updater : updates.values())
 		{
-			try
-			{
-				updater.updateIdentfier(adaptor, personID);
-			}
-			catch (Exception e)
-			{
-				// log a message and a full exception with stack trace.
-				logger.error("Exception caught while trying to update identifier: "+updater.toString()+" ; Exception is: ", e);
-				throw e;
-			}
+//			try
+//			{
+				updater.forEach(u -> {
+					try
+					{
+						u.updateIdentfier(adaptor, personID);
+					}
+					catch (Exception e)
+					{
+						logger.error("Exception caught while trying to update identifier: "+updater.toString()+" ; Exception is: ", e);
+//						throw e;
+					}
+				});
+//			}
+//			catch (Exception e)
+//			{
+//				// log a message and a full exception with stack trace.
+//				logger.error("Exception caught while trying to update identifier: "+updater.toString()+" ; Exception is: ", e);
+//				throw e;
+//			}
 		}
 	}
 }
