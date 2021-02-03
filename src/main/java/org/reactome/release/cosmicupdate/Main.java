@@ -105,15 +105,15 @@ public class Main extends ReleaseStep
 		{
 			logger.info("User has specified that update process should run.");
 			
-//			// first thing, check the files and unzip them if necessary.
-//			GUnzipCallable unzipper1 = new GUnzipCallable(Paths.get(Main.COSMICFusionExport + ".gz"), Paths.get(Main.COSMICFusionExport));
-//			GUnzipCallable unzipper2 = new GUnzipCallable(Paths.get(Main.COSMICMutantExport + ".gz"), Paths.get(Main.COSMICMutantExport));
-//			GUnzipCallable unzipper3 = new GUnzipCallable(Paths.get(Main.COSMICMutationTracking + ".gz"), Paths.get(Main.COSMICMutationTracking));
-//			
-//			ExecutorService execService = Executors.newCachedThreadPool();
-//			// The files are large and it could be slow to unzip them sequentially, so we will unzip them in parallel.
-//			execService.invokeAll(Arrays.asList(unzipper1, unzipper2, unzipper3));
-//			execService.shutdown();
+			// first thing, check the files and unzip them if necessary.
+			GUnzipCallable unzipper1 = new GUnzipCallable(Paths.get(Main.COSMICFusionExport + ".gz"), Paths.get(Main.COSMICFusionExport));
+			GUnzipCallable unzipper2 = new GUnzipCallable(Paths.get(Main.COSMICMutantExport + ".gz"), Paths.get(Main.COSMICMutantExport));
+			GUnzipCallable unzipper3 = new GUnzipCallable(Paths.get(Main.COSMICMutationTracking + ".gz"), Paths.get(Main.COSMICMutationTracking));
+			
+			ExecutorService execService = Executors.newCachedThreadPool();
+			// The files are large and it could be slow to unzip them sequentially, so we will unzip them in parallel.
+			execService.invokeAll(Arrays.asList(unzipper1, unzipper2, unzipper3));
+			execService.shutdown();
 			
 			MySQLAdaptor adaptor = ReleaseStep.getMySQLAdaptorFromProperties(props);
 			loadTestModeFromProperties(props);
@@ -127,9 +127,10 @@ public class Main extends ReleaseStep
 				}
 				catch (Exception e)
 				{
-					e.printStackTrace();
+					// exception caught here means there is probably some fundamental problem with the data
+					// such that the program should probably not continue, so throw Error.
+					throw new Error(e);
 				}
-				return false;
 			}).collect(Collectors.toList());
 			logger.info("{} filtered COSMIC identifiers", filteredCosmicObjects.size());
 	
