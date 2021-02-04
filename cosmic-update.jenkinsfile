@@ -1,6 +1,11 @@
-import groovy.json.JsonSlurper
-def currentRelease
-def previousRelease
+// This Jenkinsfile is used by Jenkins to run the UpdateStableIdentifiers step of Reactome's release.
+// It requires that the ConfirmReleaseConfigs step has been run successfully before it can be run.
+
+import org.reactome.release.jenkins.utilities.Utilities
+
+// Shared library maintained at 'release-jenkins-utils' repository.
+def utils = new Utilities()
+
 pipeline
 {
 	agent any
@@ -13,23 +18,7 @@ pipeline
 			{
 				script
 				{
-					// Get current release number from directory
-					currentRelease = (pwd() =~ /Releases\/(\d+)\//)[0][1];
-					previousRelease = (pwd() =~ /Releases\/(\d+)\//)[0][1].toInteger() - 1;
-					// This queries the Jenkins API to confirm that the most recent build of 'UniProt Update' was successful.
-					def uniprotStatusUrl = httpRequest authentication: 'jenkinsKey', validResponseCodes: "${env.VALID_RESPONSE_CODES}", url: "${env.JENKINS_JOB_URL}/job/${currentRelease}/job/Pre-Slice/job/UniProtUpdate/lastBuild/api/json"
-					if (uniprotStatusUrl.getStatus() == 404)
-					{
-						error("UniProt Update has not yet been run. Please complete a successful build.")
-					}
-					else
-					{
-						def uniprotStatusJson = new JsonSlurper().parseText(uniprotStatusUrl.getContent())
-						if (uniprotStatusJson['result'] != "SUCCESS")
-						{
-							error("Most recent UniProt Update build status: " + uniprotStatusJson['result'] + ". Please complete a successful build.")
-						}
-					}
+					utils.checkUpstreamBuildsSucceeded("UniProtUpdate")
 				}
 			}
 		}
@@ -42,9 +31,7 @@ pipeline
 				{
 					withCredentials([usernamePassword(credentialsId: 'mySQLCuratorUsernamePassword', passwordVariable: 'pass', usernameVariable: 'user')])
 					{
-						def central_before_cosmic_update_dump = "${env.GK_CENTRAL}_${currentRelease}_before_cosmic_update.dump"
-						sh "mysqldump -u$user -p$pass -h${env.CURATOR_SERVER} ${env.GK_CENTRAL} > $central_before_cosmic_update_dump"
-						sh "gzip -f $central_before_cosmic_update_dump"
+						utils.takeDatabaseDumpAndGzip("${env.GK_CENTRAL_DB}", "cosmic-update", "before", "${env.CURATOR_SERVER}")
 					}
 				}
 			}
@@ -56,7 +43,7 @@ pipeline
 			{
 				script
 				{
-					sh "mvn -DskipTests clean compile assembly:single"
+					utils.buildJarFile()
 				}
 			}
 		}
@@ -98,9 +85,7 @@ pipeline
 				{
 					withCredentials([usernamePassword(credentialsId: 'mySQLCuratorUsernamePassword', passwordVariable: 'pass', usernameVariable: 'user')])
 					{
-						def central_after_update_cosmic_update_dump = "${env.GK_CENTRAL}_${currentRelease}_after_cosmic_update.dump"
-						sh "mysqldump -u$user -p$pass -h${env.CURATOR_SERVER} ${env.GK_CENTRAL} > $central_after_update_cosmic_update_dump"
-						sh "gzip -f $central_after_update_cosmic_update_dump"
+						utils.takeDatabaseDumpAndGzip("${env.GK_CENTRAL_DB}", "cosmic-update", "after", "${env.CURATOR_SERVER}")
 					}
 				}
 			}
@@ -131,15 +116,13 @@ pipeline
 			{
 				script
 				{
-					def s3Path = "${env.S3_RELEASE_DIRECTORY_URL}/${currentRelease}/cosmic_update"
-					sh "mkdir -p databases/ data/"
-					sh "mv --backup=numbered *_${currentRelease}_*.dump.gz databases/"
-					sh "gzip data/* logs/*"
-					sh "mv cosmic-update-v${currentRelease}-reports.tgz data/"
-					sh "aws s3 --no-progress --recursive cp databases/ $s3Path/databases/"
-					sh "aws s3 --no-progress --recursive cp logs/ $s3Path/logs/"
-					sh "aws s3 --no-progress --recursive cp data/ $s3Path/data/"
-					sh "rm -r databases logs data reports"
+					def dataFiles = []
+					// Additional log files from post-step QA need to be pulled in
+					def logFiles = ["data-release-pipeline/cosmic-update/logs/*"]
+					// This folder is utilized for post-step QA. Jenkins creates multiple temporary directories
+					// cloning and checking out repositories, which is why the wildcard is added.
+					def foldersToDelete = ["data-release-pipeline*"]
+					utils.cleanUpAndArchiveBuildFiles("cosmic-update", dataFiles, logFiles, foldersToDelete)
 				}
 			}
 		}
