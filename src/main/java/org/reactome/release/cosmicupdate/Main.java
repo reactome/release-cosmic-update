@@ -40,6 +40,12 @@ public class Main extends ReleaseStep
 					+ " Example: PT48H == \"48 hours\"")
 	private Duration fileAge;
 	
+	@Parameter(names = {"-c"}, description = "The path to the configuration file. Default is src/main/resources/config.properties")
+	private static String configPath = "src/main/resources/config.properties";
+	
+//	@Parameter(names = {"-a"}, description = "The path to the authorization file, containing usernames and passwords. Default is src/main/resources/auth.properties")
+//	private static String authPath = "src/main/resources/auth.properties";
+	
 	private static String COSMICMutantExport;
 	private static String COSMICFusionExport;
 	private static String COSMICMutationTracking;
@@ -58,26 +64,49 @@ public class Main extends ReleaseStep
 	{
 		try
 		{
-			try(Reader configReader = new FileReader("src/main/resources/config.properties"))
+			boolean noConfigSpecified = Main.configPath != null && !Main.configPath.trim().isEmpty();
+//			boolean noAuthConfigSpecified = Main.authPath != null && !Main.authPath.trim().isEmpty();
+			if (!noConfigSpecified /* && !noAuthConfigSpecified */)
 			{
-				Properties props = new Properties();
-				props.load(configReader);
-				
-				// These default to files in the same directory where the program is running.
-				Main.COSMICMutantExport = props.getProperty("pathToMutantExportFile", "./CosmicMutantExport.tsv");
-				Main.COSMICFusionExport = props.getProperty("pathToFusionExportFile", "./CosmicFusionExport.tsv");
-				Main.COSMICMutationTracking = props.getProperty("pathToMutationTrackingFile", "./CosmicMutationTracking.tsv");
-				// These have NO default.
-				Main.COSMICUsername = props.getProperty("cosmic.username");
-				Main.COSMICPassword = props.getProperty("cosmic.password");
-				Main.personID = Long.parseLong(props.getProperty("personID"));
-				// These must be set in the properties file.
-				Main.COSMICMutantExportURL = props.getProperty("urlToMutantExportFile");
-				Main.COSMICFusionExportURL = props.getProperty("urlToFusionExportFile");
-				Main.COSMICMutationTrackingURL = props.getProperty("urlToMutationTrackingFile");
-				Main cosmicUpdateStep = new Main();
-				JCommander.newBuilder().addObject(cosmicUpdateStep).build().parse(args);
-				cosmicUpdateStep.executeStep(props);
+				try(Reader configReader = new FileReader(Main.configPath);
+				/* Reader authReader = new FileReader(Main.authPath) */)
+				{
+					Properties configProps = new Properties();
+					configProps.load(configReader);
+					
+//					Properties authProps = new Properties();
+//					authProps.load(authReader);
+
+					// These default to files in the same directory where the program is running.
+					Main.COSMICMutantExport = configProps.getProperty("pathToMutantExportFile", "./CosmicMutantExport.tsv");
+					Main.COSMICFusionExport = configProps.getProperty("pathToFusionExportFile", "./CosmicFusionExport.tsv");
+					Main.COSMICMutationTracking = configProps.getProperty("pathToMutationTrackingFile", "./CosmicMutationTracking.tsv");
+					// These have NO default.
+					Main.COSMICUsername = configProps.getProperty("cosmic.username");
+					Main.COSMICPassword = configProps.getProperty("cosmic.password");
+					Main.personID = Long.parseLong(configProps.getProperty("personID"));
+					// These must be set in the properties file.
+					Main.COSMICMutantExportURL = configProps.getProperty("urlToMutantExportFile");
+					Main.COSMICFusionExportURL = configProps.getProperty("urlToFusionExportFile");
+					Main.COSMICMutationTrackingURL = configProps.getProperty("urlToMutationTrackingFile");
+					Main cosmicUpdateStep = new Main();
+					JCommander.newBuilder().addObject(cosmicUpdateStep).build().parse(args);
+					cosmicUpdateStep.executeStep(configProps);
+				}
+			}
+			else
+			{
+				if (noConfigSpecified)
+				{
+					logger.fatal("Empty/null value for path to config.properties file was specified. This MUST be specified as \"-c /path/to/config.properties\" "
+							+ "or do not specify anything and the default will be src/main/resources/config.properties");
+				}
+//				if (noAuthConfigSpecified)
+//				{
+//					logger.fatal("Empty/null value for path to auth.properties file was specified. This MUST be specified as \"-c /path/to/auth.properties\" "
+//							+ "or do not specify anything and the default will be src/main/resources/auth.properties");
+//				}
+				throw new Error("Empty/null values were given for the path to a config file. The program cannot run withouth the config file.");
 			}
 		}
 		catch (SQLException e)
