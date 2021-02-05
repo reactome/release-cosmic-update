@@ -13,6 +13,15 @@
 		<maven.compiler.source>1.8</maven.compiler.source>
 	</properties>
 	
+	<developers>
+		<developer>
+			<email>solomon.shorser@oicr.on.ca</email>
+			<name>Solomon Shorser</name>
+			<organization>Ontario Institute of Cancer Research</organization>
+			<organizationUrl>https://oicr.on.ca</organizationUrl>
+		</developer>
+	</developers>
+	
 	<dependencies>
 		<dependency>
 			<groupId>org.apache.commons</groupId>
@@ -74,4 +83,17 @@
 			<scope>test</scope>
 		</dependency>
 	</dependencies>
+	
+	<repositories>
+		<repository>
+			<id>sonatype-snapshot</id>
+			<url>https://oss.sonatype.org/content/repositories/snapshots/</url>
+			<snapshots>
+				<enabled>true</enabled>
+			</snapshots>
+			<releases>
+				<enabled>false</enabled>
+			</releases>
+		</repository>
+	</repositories>
 </project>
