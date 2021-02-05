@@ -18,7 +18,7 @@ pipeline
 			{
 				script
 				{
-					utils.checkUpstreamBuildsSucceeded("UniProtUpdate")
+					utils.checkUpstreamBuildsSucceeded("Pre-Slice/job/UniProtUpdate")
 				}
 			}
 		}
