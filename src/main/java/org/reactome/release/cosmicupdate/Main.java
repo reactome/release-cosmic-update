@@ -58,7 +58,7 @@ public class Main extends ReleaseStep
 	private static String COSMICPassword;
 	
 	private static final Logger logger = LogManager.getLogger();
-	private static long personID;
+	private static long personId;
 
 	public static void main(String... args)
 	{
@@ -82,9 +82,9 @@ public class Main extends ReleaseStep
 					Main.COSMICFusionExport = configProps.getProperty("pathToFusionExportFile", "./CosmicFusionExport.tsv");
 					Main.COSMICMutationTracking = configProps.getProperty("pathToMutationTrackingFile", "./CosmicMutationTracking.tsv");
 					// These have NO default.
-					Main.COSMICUsername = configProps.getProperty("cosmic.username");
+					Main.COSMICUsername = configProps.getProperty("cosmic.user");
 					Main.COSMICPassword = configProps.getProperty("cosmic.password");
-					Main.personID = Long.parseLong(configProps.getProperty("personID"));
+					Main.personId = Long.parseLong(configProps.getProperty("personId"));
 					// These must be set in the properties file.
 					Main.COSMICMutantExportURL = configProps.getProperty("urlToMutantExportFile");
 					Main.COSMICFusionExportURL = configProps.getProperty("urlToFusionExportFile");
@@ -273,7 +273,7 @@ public class Main extends ReleaseStep
 			updater.forEach(u -> {
 				try
 				{
-					u.updateIdentfier(adaptor, personID);
+					u.updateIdentfier(adaptor, personId);
 				}
 				catch (Exception e)
 				{
