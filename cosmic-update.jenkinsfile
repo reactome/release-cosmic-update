@@ -57,7 +57,7 @@ pipeline
 				{
 					withCredentials([file(credentialsId: 'Config', variable: 'ConfigFile')])
 					{
-						sh "java -Xmx${env.JAVA_MEM_MAX}m -jar target/cosmic-update-*-jar-with-dependencies.jar -d PT72H"
+						sh "java -Xmx${env.JAVA_MEM_MAX}m -jar target/cosmic-update-*-jar-with-dependencies.jar -d PT72H -c $ConfigFile"
 					}
 				}
 			}
@@ -71,7 +71,7 @@ pipeline
 				{
 					withCredentials([usernamePassword(credentialsId: 'mySQLCuratorUsernamePassword', passwordVariable: 'pass', usernameVariable: 'user')])
 					{
-						sh "java -Xmx${env.JAVA_MEM_MAX}m -jar target/cosmic-update-*-jar-with-dependencies.jar -u"
+						sh "java -Xmx${env.JAVA_MEM_MAX}m -jar target/cosmic-update-*-jar-with-dependencies.jar -u -c $ConfigFile"
 					}
 				}
 			}
