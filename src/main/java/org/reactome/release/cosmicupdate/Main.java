@@ -1,9 +1,12 @@
 package org.reactome.release.cosmicupdate;
 
+import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.IOException;
 import java.io.Reader;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.sql.SQLException;
 import java.time.Duration;
@@ -41,7 +44,7 @@ public class Main extends ReleaseStep
 	private Duration fileAge;
 	
 	@Parameter(names = {"-c"}, description = "The path to the configuration file. Default is src/main/resources/config.properties")
-	private static String configPath = "src/main/resources/config.properties";
+	private String configPath = "src/main/resources/config.properties";
 	
 //	@Parameter(names = {"-a"}, description = "The path to the authorization file, containing usernames and passwords. Default is src/main/resources/auth.properties")
 //	private static String authPath = "src/main/resources/auth.properties";
@@ -64,50 +67,10 @@ public class Main extends ReleaseStep
 	{
 		try
 		{
-			boolean noConfigSpecified = Main.configPath != null && !Main.configPath.trim().isEmpty();
-//			boolean noAuthConfigSpecified = Main.authPath != null && !Main.authPath.trim().isEmpty();
-			if (!noConfigSpecified /* && !noAuthConfigSpecified */)
-			{
-				try(Reader configReader = new FileReader(Main.configPath);
-				/* Reader authReader = new FileReader(Main.authPath) */)
-				{
-					Properties configProps = new Properties();
-					configProps.load(configReader);
-					
-//					Properties authProps = new Properties();
-//					authProps.load(authReader);
-
-					// These default to files in the same directory where the program is running.
-					Main.COSMICMutantExport = configProps.getProperty("pathToMutantExportFile", "./CosmicMutantExport.tsv");
-					Main.COSMICFusionExport = configProps.getProperty("pathToFusionExportFile", "./CosmicFusionExport.tsv");
-					Main.COSMICMutationTracking = configProps.getProperty("pathToMutationTrackingFile", "./CosmicMutationTracking.tsv");
-					// These have NO default.
-					Main.COSMICUsername = configProps.getProperty("cosmic.user");
-					Main.COSMICPassword = configProps.getProperty("cosmic.password");
-					Main.personId = Long.parseLong(configProps.getProperty("personId"));
-					// These must be set in the properties file.
-					Main.COSMICMutantExportURL = configProps.getProperty("urlToMutantExportFile");
-					Main.COSMICFusionExportURL = configProps.getProperty("urlToFusionExportFile");
-					Main.COSMICMutationTrackingURL = configProps.getProperty("urlToMutationTrackingFile");
-					Main cosmicUpdateStep = new Main();
-					JCommander.newBuilder().addObject(cosmicUpdateStep).build().parse(args);
-					cosmicUpdateStep.executeStep(configProps);
-				}
-			}
-			else
-			{
-				if (noConfigSpecified)
-				{
-					logger.fatal("Empty/null value for path to config.properties file was specified. This MUST be specified as \"-c /path/to/config.properties\" "
-							+ "or do not specify anything and the default will be src/main/resources/config.properties");
-				}
-//				if (noAuthConfigSpecified)
-//				{
-//					logger.fatal("Empty/null value for path to auth.properties file was specified. This MUST be specified as \"-c /path/to/auth.properties\" "
-//							+ "or do not specify anything and the default will be src/main/resources/auth.properties");
-//				}
-				throw new Error("Empty/null values were given for the path to a config file. The program cannot run withouth the config file.");
-			}
+			Main cosmicUpdateStep = new Main();
+			JCommander.newBuilder().addObject(cosmicUpdateStep).build().parse(args);
+			Properties configProps = cosmicUpdateStep.getConfig();
+			cosmicUpdateStep.executeStep(configProps);
 		}
 		catch (SQLException e)
 		{
@@ -120,6 +83,64 @@ public class Main extends ReleaseStep
 		
 	}
 
+	private Properties getConfig()
+	{
+		boolean noConfigSpecified = this.configPath != null && this.configPath.trim().isEmpty();
+//		boolean noAuthConfigSpecified = Main.authPath != null && !Main.authPath.trim().isEmpty();
+		if (!noConfigSpecified /* && !noAuthConfigSpecified */)
+		{
+			try(Reader configReader = new FileReader(this.configPath);
+			/* Reader authReader = new FileReader(Main.authPath) */)
+			{
+				Properties configProps = new Properties();
+				configProps.load(configReader);
+				
+//				Properties authProps = new Properties();
+//				authProps.load(authReader);
+
+				// These default to files in the same directory where the program is running.
+				Main.COSMICMutantExport = configProps.getProperty("pathToMutantExportFile", "./CosmicMutantExport.tsv");
+				Main.COSMICFusionExport = configProps.getProperty("pathToFusionExportFile", "./CosmicFusionExport.tsv");
+				Main.COSMICMutationTracking = configProps.getProperty("pathToMutationTrackingFile", "./CosmicMutationTracking.tsv");
+				// These have NO default.
+				Main.COSMICUsername = configProps.getProperty("cosmic.user");
+				Main.COSMICPassword = configProps.getProperty("cosmic.password");
+				Main.personId = Long.parseLong(configProps.getProperty("personId"));
+				// These must be set in the properties file.
+				Main.COSMICMutantExportURL = configProps.getProperty("urlToMutantExportFile");
+				Main.COSMICFusionExportURL = configProps.getProperty("urlToFusionExportFile");
+				Main.COSMICMutationTrackingURL = configProps.getProperty("urlToMutationTrackingFile");
+//				Main cosmicUpdateStep = new Main();
+//				JCommander.newBuilder().addObject(cosmicUpdateStep).build().parse(args);
+//				cosmicUpdateStep.executeStep(configProps);
+				return configProps;
+			}
+			catch (FileNotFoundException e)
+			{
+				logger.fatal("FileNotFoundException occurred while trying to load the config file \""+this.configPath+"\"", e);
+			}
+			catch (IOException e)
+			{
+				logger.fatal("IOException occurred while trying to load the config file.", e);
+			}
+		}
+		else
+		{
+			if (noConfigSpecified)
+			{
+				logger.fatal("Empty/null value for path to config.properties file was specified. This MUST be specified as \"-c /path/to/config.properties\" "
+						+ "or do not specify anything and the default will be src/main/resources/config.properties");
+			}
+//			if (noAuthConfigSpecified)
+//			{
+//				logger.fatal("Empty/null value for path to auth.properties file was specified. This MUST be specified as \"-c /path/to/auth.properties\" "
+//						+ "or do not specify anything and the default will be src/main/resources/auth.properties");
+//			}
+			throw new Error("Empty/null values were given for the path to a config file. The program cannot run withouth the config file.");
+		}
+		return null;
+	}
+	
 	@Override
 	public void executeStep(Properties props) throws Exception
 	{
@@ -143,7 +164,7 @@ public class Main extends ReleaseStep
 			// The files are large and it could be slow to unzip them sequentially, so we will unzip them in parallel.
 			execService.invokeAll(Arrays.asList(unzipper1, unzipper2, unzipper3));
 			execService.shutdown();
-//			
+			
 			MySQLAdaptor adaptor = ReleaseStep.getMySQLAdaptorFromProperties(props);
 			loadTestModeFromProperties(props);
 			Collection<GKInstance> cosmicObjects = COSMICUpdateUtil.getCOSMICIdentifiers(adaptor);
@@ -171,6 +192,37 @@ public class Main extends ReleaseStep
 			{
 				updateIdentifiers(adaptor, updaters);
 			}
+			cleanupFiles();
+		}
+	}
+
+	/** Cean up the uncompressed data files. Don't remove the zipped files, because if you need to run this code again,
+	 * you'll be stuck waiting for the files to download again. Try to avoid removing the zipped files until you're *sure*
+	 * this step has run successfully.
+	 */
+	private void cleanupFiles()
+	{
+		deleteFile(Main.COSMICFusionExport);
+		deleteFile(Main.COSMICMutantExport);
+		deleteFile(Main.COSMICMutationTracking);
+		
+	}
+
+	/**
+	 * Deletes a file and logs a message about the deletion.
+	 * @param fileName
+	 */
+	private void deleteFile(String fileName) 
+	{
+	
+		try
+		{
+			Files.deleteIfExists(Paths.get(fileName));
+			logger.info("{} was deleted.", Main.COSMICFusionExport);
+		}
+		catch (IOException e)
+		{
+			logger.warn("IOException caught while cleaning up the data file: \"" + fileName + "\". You may need to manualy remove any remaining files.", e);
 		}
 	}
 
