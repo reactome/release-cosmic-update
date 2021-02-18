@@ -57,7 +57,7 @@ public class COSMICUpdateUtil
 	
 	/**
 	 * Validate the identifiers in the database by comparing them to the identifiers in the file.
-	 * @param updaters A map of updaters, keyed by COSMIC identifier.
+	 * @param updaters A map of updaters (actually, it's a LIST of updaters, in case > 1 object is identified by the same identifier value), keyed by COSMIC identifier.
 	 * @param COSMICFusionExportFile The path to the COSMIC Fusion Export file.
 	 * @param COSMICMutationTrackingFile The path to the COSMIC Mutation Tracking file.
 	 * @param COSMICMutantExportFile The path to the COMSIC Mutant Export file.
@@ -66,6 +66,20 @@ public class COSMICUpdateUtil
 	 */
 	static void validateIdentifiersAgainstFiles(Map<String, List<COSMICIdentifierUpdater>> updaters, String COSMICFusionExportFile, String COSMICMutationTrackingFile, String COSMICMutantExportFile) throws IOException, FileNotFoundException
 	{
+		// A COSMIC identifier is "valid" if it can be mapped in the COMSIC files.
+		// First, process COSF identifiers. A COSMIC Fustion (COSF) identifier is valid if it can be found in the COSMIC Fusion Export file. Pretty simple, right? It gets better, below. ;)
+		// 
+		// Handle the other COSMIC identifiers (COSM/COSV)
+		// Step 1: Look at the COSMIC Mutation Tracking file (a file that maps from old legacy COSM identifiers to new COSV identifiers), and create mappings.
+		// Step 2: Look at the COSMIC Mutant Export file (a file with all COSMIC coding point mutations from targeted and genome wide screens from the current release).
+		//         IFF an identifier is in Mutant Export, add (to the Updater object) any additional mutations from Mutant Export, set COSV identifier,
+		//         and indicate that the identifier is VALID. 
+		// 
+		// The goal is to set valid = true for an identifier that is currently valid in COSMIC - if you search that identifier, or create a link containing it, you will get 
+		// a result. Sometimes, there is no mapping to a COSV identifier for a given COSM identifier. This will result in "valid == fale".
+		// It may also happen that a mapping from a COSM to a COSV does exist in Mutation Tracking, but the COSM is not in Mutant Export, meaning it is not
+		// a *current* identifier in the current COSMIC database, so it will also have "valid == false".
+		
 		validateAgainstCosmicFusionExport(updaters, COSMICFusionExportFile);
 		validateAgainstCosmicMutationTracking(updaters, COSMICMutationTrackingFile);
 		validateAgainstCosmicMutantExport(updaters, COSMICMutantExportFile);
@@ -106,6 +120,7 @@ public class COSMICUpdateUtil
 				if (updaters.containsKey(legacyID))
 				{
 					updaters.get(legacyID).forEach(updater -> {
+						// It is not yet known if this identifier will be valid as per COSMIC's data.
 						updater.getMutationIDs().add(mutationID);
 						updater.setCosvIdentifier(genomicID);
 					});
@@ -125,6 +140,7 @@ public class COSMICUpdateUtil
 				String fusionID = record.get(COSMIC_FUSION_ID);
 				if (fusionIDs.contains(fusionID))
 				{
+					// COSF identifiers are valid if they are in the Fusion Export mapping.
 					updaters.get(COSMIC_FUSION_PREFIX+fusionID).forEach(updater -> updater.setValid(true));
 				}
 			});
@@ -250,7 +266,7 @@ public class COSMICUpdateUtil
 	 * refSequence. 
 	 * @param refSequence A Reference Sequence
 	 * @param modResidues The modified residues.
-	 * @return TRUE if there is a mismatch: a mismatch is when the reference sequence DBID != the modified residues's reference sequence's DBID. FALSE, otherwise.
+	 * @return TRUE if there is a mismatch: a mismatch is when the reference sequence DBID != the modifiedResidues' referenceSequence's DBID. FALSE, otherwise.
 	 * @throws InvalidAttributeException
 	 * @throws Exception
 	 */
@@ -292,7 +308,7 @@ public class COSMICUpdateUtil
 		GKInstance cosmicRefDB = null;
 		if (refDBs.size() == 1)
 		{
-			cosmicRefDB = refDBs.stream().findFirst().get();
+			cosmicRefDB = new ArrayList<>(refDBs).get(0);
 		}
 		else
 		{
