@@ -118,8 +118,7 @@ pipeline
 				script
 				{
 					def dataFiles = []
-					// Additional log files from post-step QA need to be pulled in
-					def logFiles = ["logs/*"]
+					def logFiles = []
 					def foldersToDelete = []
 					utils.cleanUpAndArchiveBuildFiles("cosmic-update", dataFiles, logFiles, foldersToDelete)
 				}
