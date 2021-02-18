@@ -179,13 +179,16 @@ public class COSMICIdentifierUpdater implements Comparable<COSMICIdentifierUpdat
 	 */
 	private void updateIdentifierObject(MySQLAdaptor adaptor, GKInstance modifiedForCOSMICUpdate, GKInstance identifierObject, String identifierValue) throws InvalidAttributeException, Exception, InvalidAttributeValueException
 	{
-		List<GKInstance> modifications = (List<GKInstance>) identifierObject.getAttributeValuesList(ReactomeJavaConstants.modified);
-		String newDisplayName = InstanceDisplayNameGenerator.generateDisplayName(identifierObject);
-		modifications.add(modifiedForCOSMICUpdate);
-		
-		identifierObject.setAttributeValue(ReactomeJavaConstants.modified, modifications);
+		// Set the identifier value.
 		identifierObject.setAttributeValue(ReactomeJavaConstants.identifier, identifierValue);
-		identifierObject.setAttributeValue(ReactomeJavaConstants._displayName, newDisplayName);
+		
+		// Add the instance edit to the modified list
+		List<GKInstance> modifications = (List<GKInstance>) identifierObject.getAttributeValuesList(ReactomeJavaConstants.modified);
+		modifications.add(modifiedForCOSMICUpdate);
+		identifierObject.setAttributeValue(ReactomeJavaConstants.modified, modifications);
+		
+		// Update the displayname after other changes (setDisplayName will generate a new value and then set it)
+		InstanceDisplayNameGenerator.setDisplayName(identifierObject);
 		
 		adaptor.updateInstanceAttribute(identifierObject, ReactomeJavaConstants.identifier);
 		adaptor.updateInstanceAttribute(identifierObject, ReactomeJavaConstants.modified);
