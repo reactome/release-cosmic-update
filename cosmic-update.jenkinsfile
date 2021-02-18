@@ -69,7 +69,7 @@ pipeline
 			{
 				script
 				{
-					withCredentials([usernamePassword(credentialsId: 'mySQLCuratorUsernamePassword', passwordVariable: 'pass', usernameVariable: 'user')])
+					withCredentials([file(credentialsId: 'Config', variable: 'ConfigFile')])
 					{
 						sh "java -Xmx${env.JAVA_MEM_MAX}m -jar target/cosmic-update-*-jar-with-dependencies.jar -u -c $ConfigFile"
 					}
