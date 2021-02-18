@@ -24,6 +24,7 @@ import org.apache.logging.log4j.Logger;
 import org.gk.model.GKInstance;
 import org.gk.model.ReactomeJavaConstants;
 import org.gk.persistence.MySQLAdaptor;
+import org.gk.schema.InvalidAttributeException;
 import org.reactome.release.common.ReleaseStep;
 import org.reactome.release.common.dataretrieval.cosmic.COSMICFileRetriever;
 import org.reactome.util.general.GUnzipCallable;
@@ -65,20 +66,11 @@ public class Main extends ReleaseStep
 
 	public static void main(String... args)
 	{
-		try
-		{
-			Main cosmicUpdateStep = new Main();
-			JCommander.newBuilder().addObject(cosmicUpdateStep).build().parse(args);
-			Properties configProps = cosmicUpdateStep.getConfig();
-			cosmicUpdateStep.executeStep(configProps);
-		}
-		catch (SQLException e)
-		{
-			logger.error("Error with SQL Connection", e);
-			e.printStackTrace();
-		} catch (Exception e) {
-			logger.error("Exception caught", e);
-		}
+		Main cosmicUpdateStep = new Main();
+		JCommander.newBuilder().addObject(cosmicUpdateStep).build().parse(args);
+		Properties configProps = cosmicUpdateStep.getConfig();
+		cosmicUpdateStep.executeStep(configProps);
+
 		logger.info("All done.");
 		
 	}
@@ -142,61 +134,101 @@ public class Main extends ReleaseStep
 	}
 	
 	@Override
-	public void executeStep(Properties props) throws Exception
+	public void executeStep(Properties props)
 	{
-		if (this.fileAge != null)
+		try
 		{
-			logger.info("User has specified that download process should run.");
-			logger.info("Files will be downloaded if they are older than {}", this.fileAge);
-			this.downloadFiles();
-		}
-		
-		if (this.executeUpdate)
-		{
-			logger.info("User has specified that update process should run.");
-			
-			// first thing, check the files and unzip them if necessary.
-			GUnzipCallable unzipper1 = new GUnzipCallable(Paths.get(Main.COSMICFusionExport + ".gz"), Paths.get(Main.COSMICFusionExport));
-			GUnzipCallable unzipper2 = new GUnzipCallable(Paths.get(Main.COSMICMutantExport + ".gz"), Paths.get(Main.COSMICMutantExport));
-			GUnzipCallable unzipper3 = new GUnzipCallable(Paths.get(Main.COSMICMutationTracking + ".gz"), Paths.get(Main.COSMICMutationTracking));
-			
-			ExecutorService execService = Executors.newCachedThreadPool();
-			// The files are large and it could be slow to unzip them sequentially, so we will unzip them in parallel.
-			execService.invokeAll(Arrays.asList(unzipper1, unzipper2, unzipper3));
-			execService.shutdown();
-			
-			MySQLAdaptor adaptor = ReleaseStep.getMySQLAdaptorFromProperties(props);
-			loadTestModeFromProperties(props);
-			Collection<GKInstance> cosmicObjects = COSMICUpdateUtil.getCOSMICIdentifiers(adaptor);
-			logger.info("{} COSMIC identifiers", cosmicObjects.size());
-			// Filter the identifiers to exclude the COSV prefixes. 
-			List<GKInstance> filteredCosmicObjects = cosmicObjects.parallelStream().filter(inst -> {
-				try
-				{
-					return !((String)inst.getAttributeValue(ReactomeJavaConstants.identifier)).toUpperCase().startsWith("COSV");
-				}
-				catch (Exception e)
-				{
-					// exception caught here means there is probably some fundamental problem with the data
-					// such that the program should probably not continue, so throw Error.
-					throw new Error(e);
-				}
-			}).collect(Collectors.toList());
-			logger.info("{} filtered COSMIC identifiers", filteredCosmicObjects.size());
-	
-			Map<String, List<COSMICIdentifierUpdater>> updaters = COSMICUpdateUtil.determinePrefixes(filteredCosmicObjects);
-			
-			COSMICUpdateUtil.validateIdentifiersAgainstFiles(updaters, COSMICFusionExport, COSMICMutationTracking, COSMICMutantExport);
-			COSMICUpdateUtil.printIdentifierUpdateReport(updaters);
-			if (!this.testMode)
+			if (this.fileAge != null)
 			{
-				updateIdentifiers(adaptor, updaters);
+				logger.info("User has specified that download process should run.");
+				logger.info("Files will be downloaded if they are older than {}", this.fileAge);
+				this.downloadFiles();
 			}
-			cleanupFiles();
+			
+			if (this.executeUpdate)
+			{
+				logger.info("User has specified that update process should run.");
+				
+				// first thing, check the files and unzip them if necessary.
+				GUnzipCallable unzipper1 = new GUnzipCallable(Paths.get(Main.COSMICFusionExport + ".gz"), Paths.get(Main.COSMICFusionExport));
+				GUnzipCallable unzipper2 = new GUnzipCallable(Paths.get(Main.COSMICMutantExport + ".gz"), Paths.get(Main.COSMICMutantExport));
+				GUnzipCallable unzipper3 = new GUnzipCallable(Paths.get(Main.COSMICMutationTracking + ".gz"), Paths.get(Main.COSMICMutationTracking));
+				
+				ExecutorService execService = Executors.newCachedThreadPool();
+				// The files are large and it could be slow to unzip them sequentially, so we will unzip them in parallel.
+				execService.invokeAll(Arrays.asList(unzipper1, unzipper2, unzipper3));
+				execService.shutdown();
+				
+				MySQLAdaptor adaptor = ReleaseStep.getMySQLAdaptorFromProperties(props);
+				loadTestModeFromProperties(props);
+				Collection<GKInstance> cosmicObjects = COSMICUpdateUtil.getCOSMICIdentifiers(adaptor);
+				logger.info("{} COSMIC identifiers", cosmicObjects.size());
+				// Filter the identifiers to exclude the COSV prefixes. 
+				List<GKInstance> filteredCosmicObjects = cosmicObjects.parallelStream().filter(inst -> {
+					try
+					{
+						return !((String)inst.getAttributeValue(ReactomeJavaConstants.identifier)).toUpperCase().startsWith("COSV");
+					}
+					catch (Exception e)
+					{
+						// exception caught here means there is probably some fundamental problem with the data
+						// such that the program should probably not continue, so throw Error.
+						throw new Error(e);
+					}
+				}).collect(Collectors.toList());
+				logger.info("{} filtered COSMIC identifiers", filteredCosmicObjects.size());
+		
+				Map<String, List<COSMICIdentifierUpdater>> updaters = COSMICUpdateUtil.determinePrefixes(filteredCosmicObjects);
+				
+				COSMICUpdateUtil.validateIdentifiersAgainstFiles(updaters, COSMICFusionExport, COSMICMutationTracking, COSMICMutantExport);
+				COSMICUpdateUtil.printIdentifierUpdateReport(updaters);
+				if (!this.testMode)
+				{
+					updateIdentifiers(adaptor, updaters);
+				}
+				cleanupFiles();
+			}
+		}
+		// These exceptions are all unrecoverable, but they get a differen catch block so we can give the user a better message.
+		catch (IllegalArgumentException e)
+		{
+			// Currently, this is thrown by the code that validates config property values. Exception is thrown when a value is missing.
+			logger.error("IllegalArgumentException was caught: " + e.getMessage(), e);
+			throw new Error(e);
+		}
+		catch (InterruptedException e)
+		{
+			logger.error("Unzip threads interrupted: " + e.getMessage(), e);
+			throw new Error(e);
+		}
+		catch (FileNotFoundException e)
+		{
+			logger.error("Input file was not found. " + e.getMessage(), e);
+			throw new Error(e);
+		}
+		catch (IOException e)
+		{
+			logger.error("General IOException: There may have been a problem processing input files or generating output reports. Error: "+e.getMessage(), e);
+			throw new Error(e);
+		}
+		catch (SQLException e)
+		{
+			logger.error("SQL Error setting up connection to database: " + e.getMessage(), e);
+			throw new Error(e);
+		} 
+		catch (InvalidAttributeException e)
+		{
+			logger.error("Error while getting COSMIC identifiers: " + e.getMessage(), e);
+			throw new Error(e);
+		}
+		catch (Exception e)
+		{
+			logger.error("General exception was caught: " + e.getMessage(), e);
+			throw new Error(e);
 		}
 	}
 
-	/** Cean up the uncompressed data files. Don't remove the zipped files, because if you need to run this code again,
+	/** Clean up the uncompressed data files. Don't remove the zipped files, because if you need to run this code again,
 	 * you'll be stuck waiting for the files to download again. Try to avoid removing the zipped files until you're *sure*
 	 * this step has run successfully.
 	 */
@@ -245,7 +277,7 @@ public class Main extends ReleaseStep
 	 * Download the data files from COSMIC.
 	 * @throws Exception
 	 */
-	private void downloadFiles() throws Exception
+	private void downloadFiles() throws IllegalArgumentException, URISyntaxException, Exception
 	{
 		//TODO: Better Properties class in release-common-lib. (for future work)
 		validateConfigValue(Main.COSMICUsername, "COSMIC Username cannot be null/empty! Please set a value for cosmic.username in the application's properties file");
@@ -320,16 +352,16 @@ public class Main extends ReleaseStep
 	 */
 	private static void updateIdentifiers(MySQLAdaptor adaptor, Map<String, List<COSMICIdentifierUpdater>> updates) throws Exception
 	{
-		for (List<COSMICIdentifierUpdater> updater : updates.values())
+		for (List<COSMICIdentifierUpdater> listOfUpdaters : updates.values())
 		{
-			updater.forEach(u -> {
+			listOfUpdaters.forEach(updater -> {
 				try
 				{
-					u.updateIdentfier(adaptor, personId);
+					updater.updateIdentfier(adaptor, personId);
 				}
 				catch (Exception e)
 				{
-					logger.error("Exception caught while trying to update identifier: " + updater.toString() + " ; Exception is: ", e);
+					logger.error("Exception caught while trying to update identifier: " + listOfUpdaters.toString() + " ; Exception is: ", e);
 				}
 			});
 		}
