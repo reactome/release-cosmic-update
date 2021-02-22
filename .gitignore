@@ -21,3 +21,20 @@
 
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
+
+# Ignore IDE files
+# Eclipse-specific
+.classpath
+.project
+.settings
+target
+
+# Project-specific
+*.tsv.gz
+*.tsv
+*.csv
+reports/*
+*.log
+logs/*
+reports
+logs
