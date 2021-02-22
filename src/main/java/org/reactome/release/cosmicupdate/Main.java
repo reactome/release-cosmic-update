@@ -47,7 +47,8 @@ public class Main extends ReleaseStep
 	@Parameter(names = {"-c"}, description = "The path to the configuration file. Default is src/main/resources/config.properties")
 	private String configPath = "src/main/resources/config.properties";
 	
-//	@Parameter(names = {"-a"}, description = "The path to the authorization file, containing usernames and passwords. Default is src/main/resources/auth.properties")
+	//TODO: Create a separate properties file for authentication values (username, password).
+//	@Parameter(names = {"-a"}, description = "The path to the authentication file, containing usernames and passwords. Default is src/main/resources/auth.properties")
 //	private static String authPath = "src/main/resources/auth.properties";
 	
 	private static String COSMICMutantExport;
@@ -128,7 +129,7 @@ public class Main extends ReleaseStep
 //				logger.fatal("Empty/null value for path to auth.properties file was specified. This MUST be specified as \"-c /path/to/auth.properties\" "
 //						+ "or do not specify anything and the default will be src/main/resources/auth.properties");
 //			}
-			throw new Error("Empty/null values were given for the path to a config file. The program cannot run withouth the config file.");
+			throw new RuntimeException("Empty/null values were given for the path to a config file. The program cannot run withouth the config file.");
 		}
 		return null;
 	}
@@ -172,8 +173,8 @@ public class Main extends ReleaseStep
 					catch (Exception e)
 					{
 						// exception caught here means there is probably some fundamental problem with the data
-						// such that the program should probably not continue, so throw Error.
-						throw new Error(e);
+						// such that the program should probably not continue..
+						throw new RuntimeException(e);
 					}
 				}).collect(Collectors.toList());
 				logger.info("{} filtered COSMIC identifiers", filteredCosmicObjects.size());
@@ -193,38 +194,38 @@ public class Main extends ReleaseStep
 		catch (IllegalArgumentException e)
 		{
 			// Currently, this is thrown by the code that validates config property values. Exception is thrown when a value is missing.
-			logger.error("IllegalArgumentException was caught: " + e.getMessage(), e);
-			throw new Error(e);
+			logger.fatal("IllegalArgumentException was caught: " + e.getMessage(), e);
+			throw new RuntimeException(e);
 		}
 		catch (InterruptedException e)
 		{
-			logger.error("Unzip threads interrupted: " + e.getMessage(), e);
-			throw new Error(e);
+			logger.fatal("Unzip threads interrupted: " + e.getMessage(), e);
+			throw new RuntimeException(e);
 		}
 		catch (FileNotFoundException e)
 		{
-			logger.error("Input file was not found. " + e.getMessage(), e);
-			throw new Error(e);
+			logger.fatal("Input file was not found. " + e.getMessage(), e);
+			throw new RuntimeException(e);
 		}
 		catch (IOException e)
 		{
-			logger.error("General IOException: There may have been a problem processing input files or generating output reports. Error: "+e.getMessage(), e);
-			throw new Error(e);
+			logger.fatal("General IOException: There may have been a problem processing input files or generating output reports. Error: "+e.getMessage(), e);
+			throw new RuntimeException(e);
 		}
 		catch (SQLException e)
 		{
-			logger.error("SQL Error setting up connection to database: " + e.getMessage(), e);
-			throw new Error(e);
+			logger.fatal("SQL Error setting up connection to database: " + e.getMessage(), e);
+			throw new RuntimeException(e);
 		} 
 		catch (InvalidAttributeException e)
 		{
-			logger.error("Error while getting COSMIC identifiers: " + e.getMessage(), e);
-			throw new Error(e);
+			logger.fatal("Error while getting COSMIC identifiers: " + e.getMessage(), e);
+			throw new RuntimeException(e);
 		}
 		catch (Exception e)
 		{
-			logger.error("General exception was caught: " + e.getMessage(), e);
-			throw new Error(e);
+			logger.fatal("General exception was caught: " + e.getMessage(), e);
+			throw new RuntimeException(e);
 		}
 	}
 

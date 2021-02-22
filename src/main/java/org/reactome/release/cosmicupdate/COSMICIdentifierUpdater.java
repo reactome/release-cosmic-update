@@ -171,7 +171,7 @@ public class COSMICIdentifierUpdater implements Comparable<COSMICIdentifierUpdat
 	 * The display name of <code>identifierObject</code> will also be regenerated to reflect changes in <code>identifierValue</code>.
 	 * @param adaptor
 	 * @param modifiedForCOSMICUpdate An InstanceEdit which explains why an instance was modified.
-	 * @param identifierObject An object that represents a COSMIC identifier.
+	 * @param identifierObject An object (probably a DatabaseIdentifier, though there is no actual restriction on type at this point) that represents a COSMIC identifier.
 	 * @param identifierValue An identifier value that will be set on <code>identifierObject</code>
 	 * @throws InvalidAttributeException
 	 * @throws Exception
