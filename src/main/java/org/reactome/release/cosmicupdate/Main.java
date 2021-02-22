@@ -190,7 +190,7 @@ public class Main extends ReleaseStep
 				cleanupFiles();
 			}
 		}
-		// These exceptions are all unrecoverable, but they get a differen catch block so we can give the user a better message.
+		// These exceptions are all unrecoverable, but they get a different catch block so we can give the user a better message.
 		catch (IllegalArgumentException e)
 		{
 			// Currently, this is thrown by the code that validates config property values. Exception is thrown when a value is missing.

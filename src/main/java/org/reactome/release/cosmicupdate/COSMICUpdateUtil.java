@@ -76,7 +76,7 @@ public class COSMICUpdateUtil
 		//         and indicate that the identifier is VALID. 
 		// 
 		// The goal is to set valid = true for an identifier that is currently valid in COSMIC - if you search that identifier, or create a link containing it, you will get 
-		// a result. Sometimes, there is no mapping to a COSV identifier for a given COSM identifier. This will result in "valid == fale".
+		// a result. Sometimes, there is no mapping to a COSV identifier for a given COSM identifier. This will result in "valid == false".
 		// It may also happen that a mapping from a COSM to a COSV does exist in Mutation Tracking, but the COSM is not in Mutant Export, meaning it is not
 		// a *current* identifier in the current COSMIC database, so it will also have "valid == false".
 		
