@@ -12,13 +12,13 @@ pipeline
 	stages
 	{
 		// This stage checks that an upstream step, UniProt Update, was run successfully.
-		stage('Check UniProt Update build succeeded')
+		stage('Check ConfirmReleaseConfigs succeeded')
 		{
 			steps
 			{
 				script
 				{
-					utils.checkUpstreamBuildsSucceeded("Pre-Slice/job/UniProtUpdate")
+					utils.checkUpstreamBuildsSucceeded("ConfirmReleaseConfigs")
 				}
 			}
 		}
