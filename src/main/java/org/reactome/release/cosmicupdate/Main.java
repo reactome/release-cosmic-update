@@ -251,11 +251,11 @@ public class Main extends ReleaseStep
 		try
 		{
 			Files.deleteIfExists(Paths.get(fileName));
-			logger.info("{} was deleted.", Main.COSMICFusionExport);
+			logger.info("{} was deleted.", fileName);
 		}
 		catch (IOException e)
 		{
-			logger.warn("IOException caught while cleaning up the data file: \"" + fileName + "\". You may need to manualy remove any remaining files.", e);
+			logger.warn("IOException caught while cleaning up the data file: \"" + fileName + "\". You may need to manually remove any remaining files.", e);
 		}
 	}
 
