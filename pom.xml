@@ -95,9 +95,10 @@
 				<version>3.3.0</version>
 				<configuration>
 					<archive>
-						<manifest>
+						<manifestEntries>
+							<Multi-Release>true</Multi-Release>
 							<mainClass>org.reactome.release.cosmicupdate.Main</mainClass>
-						</manifest>
+						</manifestEntries>
 					</archive>
 					<descriptorRefs>
 						<descriptorRef>jar-with-dependencies</descriptorRef>
