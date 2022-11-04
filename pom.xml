@@ -97,7 +97,7 @@
 					<archive>
 						<manifestEntries>
 							<Multi-Release>true</Multi-Release>
-							<mainClass>org.reactome.release.cosmicupdate.Main</mainClass>
+							<Main-Class>org.reactome.release.cosmicupdate.Main</Main-Class>
 						</manifestEntries>
 					</archive>
 					<descriptorRefs>
