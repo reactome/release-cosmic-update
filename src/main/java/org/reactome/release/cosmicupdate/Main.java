@@ -27,6 +27,7 @@ import org.gk.persistence.MySQLAdaptor;
 import org.gk.schema.InvalidAttributeException;
 import org.reactome.release.common.ReleaseStep;
 import org.reactome.release.common.dataretrieval.cosmic.COSMICFileRetriever;
+import org.reactome.util.general.DBUtils;
 import org.reactome.util.general.GUnzipCallable;
 
 import com.beust.jcommander.JCommander;
@@ -160,7 +161,7 @@ public class Main extends ReleaseStep
 				execService.invokeAll(Arrays.asList(unzipper1, unzipper2, unzipper3));
 				execService.shutdown();
 				
-				MySQLAdaptor adaptor = ReleaseStep.getMySQLAdaptorFromProperties(props);
+				MySQLAdaptor adaptor = DBUtils.getCuratorDbAdaptor(props);
 				loadTestModeFromProperties(props);
 				Collection<GKInstance> cosmicObjects = COSMICUpdateUtil.getCOSMICIdentifiers(adaptor);
 				logger.info("{} COSMIC identifiers", cosmicObjects.size());
