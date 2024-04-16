@@ -132,35 +132,31 @@ public class Main extends ReleaseStep {
 			executeUpdate();
 		}
 
+        MySQLAdaptor adaptor = ReleaseStep.getMySQLAdaptorFromProperties(props);
+        Collection<GKInstance> cosmicObjects = COSMICUpdateUtil.getCOSMICIdentifiers(adaptor);
+        logger.info("{} COSMIC identifiers", cosmicObjects.size());
+        // Filter the identifiers to exclude the COSV prefixes.
+        List<GKInstance> filteredCosmicObjects = cosmicObjects.parallelStream().filter(inst -> {
+            try {
+                return !((String)inst.getAttributeValue(ReactomeJavaConstants.identifier)).toUpperCase().startsWith("COSV");
+            } catch (Exception e) {
+                // exception caught here means there is probably some fundamental problem with the data
+                // such that the program should probably not continue..
+                throw new RuntimeException(e);
+            }
+        }).collect(Collectors.toList());
+        logger.info("{} filtered COSMIC identifiers", filteredCosmicObjects.size());
 
+        Map<String, List<COSMICIdentifierUpdater>> updaters = COSMICUpdateUtil.determinePrefixes(filteredCosmicObjects);
 
+        COSMICUpdateUtil.validateIdentifiersAgainstFiles(updaters, COSMICFusionExport, COSMICMutationTracking, COSMICMutantExport);
+        COSMICUpdateUtil.printIdentifierUpdateReport(updaters);
 
-				MySQLAdaptor adaptor = ReleaseStep.getMySQLAdaptorFromProperties(props);
-				Collection<GKInstance> cosmicObjects = COSMICUpdateUtil.getCOSMICIdentifiers(adaptor);
-				logger.info("{} COSMIC identifiers", cosmicObjects.size());
-				// Filter the identifiers to exclude the COSV prefixes.
-				List<GKInstance> filteredCosmicObjects = cosmicObjects.parallelStream().filter(inst -> {
-					try {
-						return !((String)inst.getAttributeValue(ReactomeJavaConstants.identifier)).toUpperCase().startsWith("COSV");
-					} catch (Exception e) {
-						// exception caught here means there is probably some fundamental problem with the data
-						// such that the program should probably not continue..
-						throw new RuntimeException(e);
-					}
-				}).collect(Collectors.toList());
-				logger.info("{} filtered COSMIC identifiers", filteredCosmicObjects.size());
-
-				Map<String, List<COSMICIdentifierUpdater>> updaters = COSMICUpdateUtil.determinePrefixes(filteredCosmicObjects);
-
-				COSMICUpdateUtil.validateIdentifiersAgainstFiles(updaters, COSMICFusionExport, COSMICMutationTracking, COSMICMutantExport);
-				COSMICUpdateUtil.printIdentifierUpdateReport(updaters);
-
-				loadTestModeFromProperties(props);
-				if (!this.testMode) {
-					updateIdentifiers(adaptor, updaters);
-				}
-				cleanupFiles();
-
+        loadTestModeFromProperties(props);
+        if (!this.testMode) {
+            updateIdentifiers(adaptor, updaters);
+        }
+        cleanupFiles();
 	}
 
 	private Properties getConfigProperties() {
