@@ -129,7 +129,7 @@ public class Main extends ReleaseStep {
 		redownloadFilesIfTooOld(this.fileAge);
 
 		if (this.executeUpdate) {
-			executeUpdate();
+			executeUpdate(props);
 		}
 	}
 
@@ -152,7 +152,7 @@ public class Main extends ReleaseStep {
 		}
 	}
 
-	private void executeUpdate() throws InterruptedException {
+	private void executeUpdate(Properties props) throws Exception {
 		logger.info("User has specified that update process should run.");
 
 		unzipFiles();
