@@ -132,7 +132,7 @@ public class Main extends ReleaseStep {
 			executeUpdate();
 		}
 
-        MySQLAdaptor adaptor = ReleaseStep.getMySQLAdaptorFromProperties(props);
+        MySQLAdaptor adaptor = DBUtils.getCuratorDbAdaptor(props);
         Collection<GKInstance> cosmicObjects = COSMICUpdateUtil.getCOSMICIdentifiers(adaptor);
         logger.info("{} COSMIC identifiers", cosmicObjects.size());
         // Filter the identifiers to exclude the COSV prefixes.
