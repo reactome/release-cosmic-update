@@ -202,7 +202,7 @@ public class Main extends ReleaseStep {
 	}
 
 	private Path getGZippedFilePath(String filePathAsString) {
-		return getGUnzippedFilePath(filePathAsString).resolve(".gz");
+		return Paths.get(getGUnzippedFilePath(filePathAsString).toString() + ".gz");
 	}
 
 	private Path getGUnzippedFilePath(String filePathAsString) {
