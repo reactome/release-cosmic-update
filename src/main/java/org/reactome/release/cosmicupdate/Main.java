@@ -129,34 +129,8 @@ public class Main extends ReleaseStep {
 		redownloadFilesIfTooOld(this.fileAge);
 
 		if (this.executeUpdate) {
-			executeUpdate();
+			executeUpdate(props);
 		}
-
-        MySQLAdaptor adaptor = DBUtils.getCuratorDbAdaptor(props);
-        Collection<GKInstance> cosmicObjects = COSMICUpdateUtil.getCOSMICIdentifiers(adaptor);
-        logger.info("{} COSMIC identifiers", cosmicObjects.size());
-        // Filter the identifiers to exclude the COSV prefixes.
-        List<GKInstance> filteredCosmicObjects = cosmicObjects.parallelStream().filter(inst -> {
-            try {
-                return !((String)inst.getAttributeValue(ReactomeJavaConstants.identifier)).toUpperCase().startsWith("COSV");
-            } catch (Exception e) {
-                // exception caught here means there is probably some fundamental problem with the data
-                // such that the program should probably not continue..
-                throw new RuntimeException(e);
-            }
-        }).collect(Collectors.toList());
-        logger.info("{} filtered COSMIC identifiers", filteredCosmicObjects.size());
-
-        Map<String, List<COSMICIdentifierUpdater>> updaters = COSMICUpdateUtil.determinePrefixes(filteredCosmicObjects);
-
-        COSMICUpdateUtil.validateIdentifiersAgainstFiles(updaters, COSMICFusionExport, COSMICMutationTracking, COSMICMutantExport);
-        COSMICUpdateUtil.printIdentifierUpdateReport(updaters);
-
-        loadTestModeFromProperties(props);
-        if (!this.testMode) {
-            updateIdentifiers(adaptor, updaters);
-        }
-        cleanupFiles();
 	}
 
 	private Properties getConfigProperties() {
@@ -178,10 +152,36 @@ public class Main extends ReleaseStep {
 		}
 	}
 
-	private void executeUpdate() throws InterruptedException {
+	private void executeUpdate(Properties props) throws Exception {
 		logger.info("User has specified that update process should run.");
 
 		unzipFiles();
+
+		MySQLAdaptor adaptor = DBUtils.getCuratorDbAdaptor(props);
+		Collection<GKInstance> cosmicObjects = COSMICUpdateUtil.getCOSMICIdentifiers(adaptor);
+		logger.info("{} COSMIC identifiers", cosmicObjects.size());
+		// Filter the identifiers to exclude the COSV prefixes.
+		List<GKInstance> filteredCosmicObjects = cosmicObjects.parallelStream().filter(inst -> {
+			try {
+				return !((String)inst.getAttributeValue(ReactomeJavaConstants.identifier)).toUpperCase().startsWith("COSV");
+			} catch (Exception e) {
+				// exception caught here means there is probably some fundamental problem with the data
+				// such that the program should probably not continue..
+				throw new RuntimeException(e);
+			}
+		}).collect(Collectors.toList());
+		logger.info("{} filtered COSMIC identifiers", filteredCosmicObjects.size());
+
+		Map<String, List<COSMICIdentifierUpdater>> updaters = COSMICUpdateUtil.determinePrefixes(filteredCosmicObjects);
+
+		COSMICUpdateUtil.validateIdentifiersAgainstFiles(updaters, COSMICFusionExport, COSMICMutationTracking, COSMICMutantExport);
+		COSMICUpdateUtil.printIdentifierUpdateReport(updaters);
+
+		loadTestModeFromProperties(props);
+		if (!this.testMode) {
+			updateIdentifiers(adaptor, updaters);
+		}
+		cleanupFiles();
 	}
 
 	private void unzipFiles() throws InterruptedException {
