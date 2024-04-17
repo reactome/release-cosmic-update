@@ -280,12 +280,12 @@ public class Main extends ReleaseStep {
 
 			Properties configProps = getConfigProperties();
 
-			final String mutantExportDestination = configProps.getProperty(
-				"pathToMutantExportFile", "./CosmicMutantExport.tsv.gz");
-			final String mutationTrackingDestination = configProps.getProperty(
-				"pathToMutationTrackingFile", "./CosmicMutationTracking.tsv.gz");
-			final String fusionExportDestination = configProps.getProperty(
-				"pathToFusionExportFile", "./CosmicFusionExport.tsv.gz");
+			final String mutantExportDestination = addGzipExtension(configProps.getProperty(
+				"pathToMutantExportFile", "./CosmicMutantExport.tsv"));
+			final String mutationTrackingDestination = addGzipExtension(configProps.getProperty(
+				"pathToMutationTrackingFile", "./CosmicMutationTracking.tsv"));
+			final String fusionExportDestination = addGzipExtension(configProps.getProperty(
+				"pathToFusionExportFile", "./CosmicFusionExport.tsv"));
 
 			mutantExportRetriever.setFetchDestination(mutantExportDestination);
 			mutationTrackingRetriever.setFetchDestination(mutationTrackingDestination);
@@ -344,5 +344,9 @@ public class Main extends ReleaseStep {
 				}
 			});
 		}
+	}
+
+	private String addGzipExtension(String filePath) {
+		return filePath + ".gz";
 	}
 }
