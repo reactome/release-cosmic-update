@@ -9,6 +9,13 @@ def utils = new Utilities()
 pipeline
 {
 	agent any
+
+	environment {
+		ECR_URL = 'public.ecr.aws/reactome/release-cosmic-update'
+		CONT_NAME = 'cosmic_container'
+		CONT_ROOT = '/opt/release-cosmic-update'
+	}
+
 	stages
 	{
 		// This stage checks that an upstream step, UniProt Update, was run successfully.
@@ -22,6 +29,8 @@ pipeline
 				}
 			}
 		}
+
+		/*
 		// This stage backs up the gk_central database before it is modified.
 		stage('Setup: Back up gk_central - pre-update')
 		{
@@ -36,20 +45,9 @@ pipeline
 				}
 			}
 		}
-		// Builds the jar file using Maven.
-		stage('Setup: Build jar file')
-		{
-			steps
-			{
-				script
-				{
-					utils.buildJarFile()
-				}
-			}
-		}
-		// Download the data files. Done as a separate step from the main program's execution so that if
-		// the program fails, you don't get stuck waiting for a long download again. 
-		stage('Download COSMIC files')
+		*/
+		// This stage makes the config/credentials file
+		stage('Setup: Get config/credentials')
 		{
 			steps
 			{
@@ -57,25 +55,59 @@ pipeline
 				{
 					withCredentials([file(credentialsId: 'Config', variable: 'ConfigFile')])
 					{
-						sh "java -Xmx${env.JAVA_MEM_MAX}m -jar target/cosmic-update-*-jar-with-dependencies.jar -d PT72H -c $ConfigFile"
+						sh "mkdir -p config"
+						sh "sudo cp $ConfigFile config/auth.properties"
+						sh "sudo chown jenkins:jenkins config/ -R"
 					}
 				}
+			}
+		}
+		// This stage pulls the docker image and removes old containers
+		stage('Setup: Pull and clean docker environment')
+		{
+			steps
+			{
+				sh "docker pull ${ECR_URL}:latest"
+				sh """
+					if docker ps -a --format '{{.Names}}' | grep -Eq '${CONT_NAME}_download'; then
+						docker rm -f ${CONT_NAME}_download
+					fi
+				"""
+				sh """
+					if docker ps -a --format '{{.Names}}' | grep -Eq '${CONT_NAME}'; then
+						docker rm -f ${CONT_NAME}
+					fi
+				"""
+			}
+		}
+
+		// Download the data files. Done as a separate step from the main program's execution so that if
+		// the program fails, you don't get stuck waiting for a long download again. 
+		stage('Main: Download COSMIC files')
+		{
+			steps
+			{
+				sh "mkdir -p cosmic-files"
+				sh """\
+					docker run -v \$(pwd)/config:${CONT_ROOT}/config -v \$(pwd)/cosmic-files:${CONT_ROOT}/cosmic-files --net=host --name ${CONT_NAME}_download \\
+						${ECR_URL}:latest \\
+						/bin/bash -c 'java -Xmx${env.JAVA_MEM_MAX}m -jar target/cosmic-update-*-jar-with-dependencies.jar -d PT72H -c config/auth.properties'
+				"""
 			}
 		}
 		// Run the COSMIC Update
-		stage('Run COSMIC updates')
+		stage('Main: Run COSMIC updates')
 		{
 			steps
 			{
-				script
-				{
-					withCredentials([file(credentialsId: 'Config', variable: 'ConfigFile')])
-					{
-						sh "java -Xmx${env.JAVA_MEM_MAX}m -jar target/cosmic-update-*-jar-with-dependencies.jar -u -c $ConfigFile"
-					}
-				}
+				sh """\
+					docker run -v \$(pwd)/config:${CONT_ROOT}/config -v \$(pwd)/cosmic-files:${CONT_ROOT}/cosmic-files --net=host --name ${CONT_NAME} \\
+						${ECR_URL}:latest \\
+						/bin/bash -c 'java -Xmx${env.JAVA_MEM_MAX}m -jar target/cosmic-update-*-jar-with-dependencies.jar -u -c config/auth.properties'
+				"""
 			}
 		}
+
 		// This stage backs up the gk_central database after modification.
 		stage('POST: Backup gk_central - post-update')
 		{
@@ -98,7 +130,11 @@ pipeline
 				script
 				{
 					def releaseVersion = utils.getReleaseVersion()
+
+					sh "mkdir -p reports"
+					sh "docker cp ${CONT_NAME}:${CONT_ROOT}/reports/. reports/"
 					sh "tar -czf cosmic-update-v${releaseVersion}-reports.tgz reports/"
+					
 					emailext (
 						body: "Hello,\n\nThis is an automated message from Jenkins regarding an update for v${releaseVersion}. The COSMIC Update step has completed. Please review the reports attached to this email. If they look correct, these reports need to be uploaded to the Reactome Drive at Reactome>Release>Release QA>V${releaseVersion}_QA>V${releaseVersion}_COSMIC_Update_Reports. The URL to the new V${releaseVersion}_COSMIC_Update_Reports folder also needs to be updated at https://devwiki.reactome.org/index.php/Reports_Archive under 'COSMIC Update Reports'. Please add the current COSMIC report wiki URL to the 'Archived reports' section of the page. If the reports don't look correct, please email the developer running Release. \n\nThanks!",
 						to: '$DEFAULT_RECIPIENTS',
