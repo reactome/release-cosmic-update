@@ -16,15 +16,16 @@ import org.reactome.release.common.database.InstanceEditUtils;
 
 /**
  * Updates a COSMIC Identifier.
- * Implements <code>Comparable</code> to make sorting easier for reporting purposes. Does *not* override the <code>equals</code> method.
+ * Implements <code>Comparable</code> to make sorting easier for reporting purposes.
+ * Does *not* override the <code>equals</code> method.
  * @author sshorser
  *
  */
-public class COSMICIdentifierUpdater implements Comparable<COSMICIdentifierUpdater>
-{
+public class COSMICIdentifierUpdater implements Comparable<COSMICIdentifierUpdater> {
 	private static final Logger logger = LogManager.getLogger();
 	private static GKInstance instanceEditNewCOSV;
 	private static GKInstance instanceEditPrependCOSM;
+
 	private String identifier;
 	private long dbID;
 	private String suggestedPrefix;
@@ -32,58 +33,56 @@ public class COSMICIdentifierUpdater implements Comparable<COSMICIdentifierUpdat
 	private Set<String> mutationIDs = new HashSet<>();
 	private String cosvIdentifier;
 
-	public String getIdentifier()
-	{
+	public String getIdentifier() {
 		return identifier;
 	}
-	public void setIdentifier(String identifier)
-	{
+
+	public void setIdentifier(String identifier) {
 		this.identifier = identifier;
 	}
-	public long getDbID()
-	{
+
+	public long getDbID() {
 		return dbID;
 	}
-	public void setDbID(long dbID)
-	{
+
+	public void setDbID(long dbID) {
 		this.dbID = dbID;
 	}
-	public String getSuggestedPrefix()
-	{
+
+	public String getSuggestedPrefix() {
 		return suggestedPrefix;
 	}
-	public void setSuggestedPrefix(String suggestedPrefix)
-	{
+
+	public void setSuggestedPrefix(String suggestedPrefix) {
 		this.suggestedPrefix = suggestedPrefix;
 	}
-	public boolean isValid()
-	{
+
+	public boolean isValid() {
 		return valid;
 	}
-	public void setValid(boolean valid)
-	{
+
+	public void setValid(boolean valid) {
 		this.valid = valid;
 	}
-	public Set<String> getMutationIDs()
-	{
+
+	public Set<String> getMutationIDs() {
 		return mutationIDs;
 	}
-	public void setMutationIDs(Set<String> mutationIDs)
-	{
+
+	public void setMutationIDs(Set<String> mutationIDs) {
 		this.mutationIDs = mutationIDs;
 	}
-	public String getCosvIdentifier()
-	{
+
+	public String getCosvIdentifier() {
 		return cosvIdentifier;
 	}
-	public void setCosvIdentifier(String cosvIdentifier)
-	{
+
+	public void setCosvIdentifier(String cosvIdentifier) {
 		this.cosvIdentifier = cosvIdentifier;
 	}
 	
 	@Override
-	public String toString()
-	{
+	public String toString() {
 		return "[" + this.getDbID() + "; " 
 					+ this.getIdentifier()+ "; "
 					+ this.getSuggestedPrefix() + "; "
@@ -97,22 +96,15 @@ public class COSMICIdentifierUpdater implements Comparable<COSMICIdentifierUpdat
 	 * This is done so that the invalid identifiers are at the top of the report.
 	 */
 	@Override
-	public int compareTo(COSMICIdentifierUpdater other)
-	{
-		if (other.valid && !this.valid)
-		{
+	public int compareTo(COSMICIdentifierUpdater other) {
+		if (other.valid && !this.valid) {
 			return -1;
 		}
-		if (!other.valid && this.valid)
-		{
+		if (!other.valid && this.valid) {
 			return 1;
 		}
-		if (other.valid == this.valid)
-		{
-			return this.identifier.compareTo(other.identifier);
-		}
-		return 0;
-	}
+        return this.identifier.compareTo(other.identifier);
+    }
 
 	/**
 	 * Perform an update of a COSMIC identifier.
@@ -120,16 +112,12 @@ public class COSMICIdentifierUpdater implements Comparable<COSMICIdentifierUpdat
 	 * @param creatorID - the DB_ID of the Creator of this update.
 	 * @throws Exception
 	 */
-	public void updateIdentfier(MySQLAdaptor adaptor, long creatorID) throws Exception
-	{
+	public void updateIdentifier(MySQLAdaptor adaptor, long creatorID) throws Exception {
 		// If there is a COSV identifier, we'll update using that.
-		if (this.getCosvIdentifier() != null && !this.getCosvIdentifier().isEmpty())
-		{
+		if (this.getCosvIdentifier() != null && !this.getCosvIdentifier().isEmpty()) {
 			// Create the InstanceEdit, if necessary.
-			synchronized (COSMICIdentifierUpdater.class)
-			{
-				if (COSMICIdentifierUpdater.instanceEditNewCOSV == null)
-				{
+			synchronized (COSMICIdentifierUpdater.class) {
+				if (COSMICIdentifierUpdater.instanceEditNewCOSV == null) {
 					COSMICIdentifierUpdater.instanceEditNewCOSV = InstanceEditUtils.createDefaultIE(adaptor, creatorID, true, "Identifier was automatically updated to new \"COSV\" identifier by COSMIC Update process.");
 				}
 			}
@@ -144,13 +132,10 @@ public class COSMICIdentifierUpdater implements Comparable<COSMICIdentifierUpdat
 			String currentIdentifier = (String) identifierObject.getAttributeValue(ReactomeJavaConstants.identifier);
 			// If the current identifier already begins with "C" then leave it alone.
 			// This code is for updating numeric identifiers that have a suggested prefix.
-			if (!COSMICUpdateUtil.stringStartsWithC(currentIdentifier.toUpperCase()))
-			{
+			if (!COSMICUpdateUtil.stringStartsWithC(currentIdentifier.toUpperCase())) {
 				// Create the InstanceEdit, if necessary.
-				synchronized (COSMICIdentifierUpdater.class)
-				{
-					if (COSMICIdentifierUpdater.instanceEditPrependCOSM == null)
-					{
+				synchronized (COSMICIdentifierUpdater.class) {
+					if (COSMICIdentifierUpdater.instanceEditPrependCOSM == null) {
 						COSMICIdentifierUpdater.instanceEditPrependCOSM = InstanceEditUtils.createDefaultIE(adaptor, creatorID, true, "Identifier was automatically prepended with \"COSM\" by COSMIC Update process.");
 					}
 				}
@@ -158,8 +143,7 @@ public class COSMICIdentifierUpdater implements Comparable<COSMICIdentifierUpdat
 			}
 		}
 		// Some identifiers won't have a COSV identifier in the COSMIC files, and they might not have a suggested prefix either.
-		else
-		{
+		else {
 			logger.info("No suggested prefix OR corresponding COSV identifier for {} (DBID: {}) - identifier will not be updated.", this.getIdentifier(), this.getDbID());
 		}
 	}
@@ -177,8 +161,9 @@ public class COSMICIdentifierUpdater implements Comparable<COSMICIdentifierUpdat
 	 * @throws Exception
 	 * @throws InvalidAttributeValueException
 	 */
-	private void updateIdentifierObject(MySQLAdaptor adaptor, GKInstance modifiedForCOSMICUpdate, GKInstance identifierObject, String identifierValue) throws InvalidAttributeException, Exception, InvalidAttributeValueException
-	{
+	private void updateIdentifierObject(
+		MySQLAdaptor adaptor, GKInstance modifiedForCOSMICUpdate, GKInstance identifierObject, String identifierValue
+	) throws InvalidAttributeException, Exception, InvalidAttributeValueException {
 		// Set the identifier value.
 		identifierObject.setAttributeValue(ReactomeJavaConstants.identifier, identifierValue);
 		

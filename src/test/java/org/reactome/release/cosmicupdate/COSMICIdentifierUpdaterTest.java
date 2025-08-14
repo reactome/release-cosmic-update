@@ -52,7 +52,7 @@ public class COSMICIdentifierUpdaterTest
 			try(MockedStatic<InstanceEditUtils> mockedStatic = Mockito.mockStatic(InstanceEditUtils.class))
 			{
 				Mockito.when(InstanceEditUtils.createDefaultIE(any(MySQLAdaptor.class), any(Long.class), any(Boolean.class), any(String.class))).thenReturn(mockInstanceEdit);
-				updater.updateIdentfier(mockAdaptor, creatorID);
+				updater.updateIdentifier(mockAdaptor, creatorID);
 			}
 		}
 		catch (Exception e)
@@ -83,7 +83,7 @@ public class COSMICIdentifierUpdaterTest
 				Mockito.when(InstanceEditUtils.createDefaultIE(any(MySQLAdaptor.class), any(Long.class), any(Boolean.class), any(String.class))).thenReturn(mockInstanceEdit);
 				Mockito.when(InstanceDisplayNameGenerator.generateDisplayName(any(GKInstance.class))).thenReturn("TestDisplayName");
 				Mockito.when(mockAdaptor.fetchInstance(any(Long.class))).thenReturn(mockIdentifierObject);
-				updater.updateIdentfier(mockAdaptor, creatorID);
+				updater.updateIdentifier(mockAdaptor, creatorID);
 			}
 		}
 		catch (Exception e)
@@ -116,7 +116,7 @@ public class COSMICIdentifierUpdaterTest
 				Mockito.when(mockIdentifierObject.getAttributeValue(ReactomeJavaConstants.identifier)).thenReturn("3333");
 				Mockito.when(mockAdaptor.fetchInstance(any(Long.class))).thenReturn(mockIdentifierObject);
 				
-				updater.updateIdentfier(mockAdaptor, creatorID);
+				updater.updateIdentifier(mockAdaptor, creatorID);
 			}
 		}
 		catch (Exception e)
