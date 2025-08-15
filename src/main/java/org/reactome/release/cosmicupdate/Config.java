@@ -13,6 +13,7 @@ import java.util.Properties;
 
 public class Config {
     private final Properties configProps;
+    private MySQLAdaptor dba;
 
     public Config(String configFilePath) {
         validateConfigFilePath(configFilePath);
@@ -36,7 +37,11 @@ public class Config {
     }
 
     public MySQLAdaptor getDBA() throws SQLException {
-        return DBUtils.getCuratorDbAdaptor(getConfigProperties());
+        if (this.dba == null) {
+            this.dba = DBUtils.getCuratorDbAdaptor(getConfigProperties());
+        }
+
+        return this.dba;
     }
 
     public List<FileConfig> getFileConfigs() {
