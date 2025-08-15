@@ -23,34 +23,32 @@ import org.reactome.release.common.database.InstanceEditUtils;
  */
 public class COSMICIdentifierUpdater implements Comparable<COSMICIdentifierUpdater> {
 	private static final Logger logger = LogManager.getLogger();
-	private static GKInstance instanceEditNewCOSV;
-	private static GKInstance instanceEditPrependCOSM;
 
 	private String identifier;
-	private long dbID;
+	private GKInstance cosmicDatabaseIdentifierInstance;
 	private String suggestedPrefix;
 	private boolean valid;
 	private Set<String> mutationIDs = new HashSet<>();
 	private String cosvIdentifier;
 
 	public String getIdentifier() {
-		return identifier;
+		return this.identifier;
 	}
 
 	public void setIdentifier(String identifier) {
 		this.identifier = identifier;
 	}
 
-	public long getDbID() {
-		return dbID;
+	public GKInstance getCosmicDatabaseIdentifierInstance() {
+		return this.cosmicDatabaseIdentifierInstance;
 	}
 
-	public void setDbID(long dbID) {
-		this.dbID = dbID;
+	public void setCosmicDatabaseIdentifierInstance(GKInstance cosmicDatabaseIdentifierInstance) {
+		this.cosmicDatabaseIdentifierInstance = cosmicDatabaseIdentifierInstance;
 	}
 
 	public String getSuggestedPrefix() {
-		return suggestedPrefix;
+		return this.suggestedPrefix;
 	}
 
 	public void setSuggestedPrefix(String suggestedPrefix) {
@@ -66,15 +64,15 @@ public class COSMICIdentifierUpdater implements Comparable<COSMICIdentifierUpdat
 	}
 
 	public Set<String> getMutationIDs() {
-		return mutationIDs;
+		return this.mutationIDs;
 	}
 
-	public void setMutationIDs(Set<String> mutationIDs) {
-		this.mutationIDs = mutationIDs;
+	public void addMutationID(String mutationID) {
+		this.mutationIDs.add(mutationID);
 	}
 
 	public String getCosvIdentifier() {
-		return cosvIdentifier;
+		return this.cosvIdentifier;
 	}
 
 	public void setCosvIdentifier(String cosvIdentifier) {
@@ -83,7 +81,7 @@ public class COSMICIdentifierUpdater implements Comparable<COSMICIdentifierUpdat
 	
 	@Override
 	public String toString() {
-		return "[" + this.getDbID() + "; " 
+		return "[" + this.getCosmicDatabaseIdentifierInstance() + "; "
 					+ this.getIdentifier()+ "; "
 					+ this.getSuggestedPrefix() + "; "
 					+ this.isValid() + "; "
@@ -108,75 +106,86 @@ public class COSMICIdentifierUpdater implements Comparable<COSMICIdentifierUpdat
 
 	/**
 	 * Perform an update of a COSMIC identifier.
-	 * @param adaptor - the database adapter to use.
-	 * @param creatorID - the DB_ID of the Creator of this update.
+	 * @param modifiedInstanceEdit
 	 * @throws Exception
 	 */
-	public void updateIdentifier(MySQLAdaptor adaptor, long creatorID) throws Exception {
+	public void updateIdentifier(GKInstance modifiedInstanceEdit) throws Exception {
 		// If there is a COSV identifier, we'll update using that.
-		if (this.getCosvIdentifier() != null && !this.getCosvIdentifier().isEmpty()) {
-			// Create the InstanceEdit, if necessary.
-			synchronized (COSMICIdentifierUpdater.class) {
-				if (COSMICIdentifierUpdater.instanceEditNewCOSV == null) {
-					COSMICIdentifierUpdater.instanceEditNewCOSV = InstanceEditUtils.createDefaultIE(adaptor, creatorID, true, "Identifier was automatically updated to new \"COSV\" identifier by COSMIC Update process.");
-				}
-			}
-			GKInstance identifierObject = adaptor.fetchInstance( this.getDbID());
-			
-			updateIdentifierObject(adaptor, COSMICIdentifierUpdater.instanceEditNewCOSV, identifierObject, this.getCosvIdentifier());
+		if (cosvIdentifierExists()) {
+			updateUsingCOSVIdentifier(modifiedInstanceEdit);
 		}
 		// If no COSV identifier was found, update using the suggested prefix (determined computationally).
-		else if (this.getSuggestedPrefix() != null && this.getSuggestedPrefix().equalsIgnoreCase(COSMICUpdateUtil.COSMIC_LEGACY_PREFIX))
-		{
-			GKInstance identifierObject = adaptor.fetchInstance( this.getDbID());
-			String currentIdentifier = (String) identifierObject.getAttributeValue(ReactomeJavaConstants.identifier);
-			// If the current identifier already begins with "C" then leave it alone.
-			// This code is for updating numeric identifiers that have a suggested prefix.
-			if (!COSMICUpdateUtil.stringStartsWithC(currentIdentifier.toUpperCase())) {
-				// Create the InstanceEdit, if necessary.
-				synchronized (COSMICIdentifierUpdater.class) {
-					if (COSMICIdentifierUpdater.instanceEditPrependCOSM == null) {
-						COSMICIdentifierUpdater.instanceEditPrependCOSM = InstanceEditUtils.createDefaultIE(adaptor, creatorID, true, "Identifier was automatically prepended with \"COSM\" by COSMIC Update process.");
-					}
-				}
-				updateIdentifierObject(adaptor, COSMICIdentifierUpdater.instanceEditPrependCOSM, identifierObject, this.getSuggestedPrefix() + currentIdentifier);
-			}
+		else if (suggestedPrefixIsCOSMICLegacyPrefix()) {
+			updateUsingSuggestedCOSMICPrefix(modifiedInstanceEdit);
 		}
 		// Some identifiers won't have a COSV identifier in the COSMIC files, and they might not have a suggested prefix either.
 		else {
-			logger.info("No suggested prefix OR corresponding COSV identifier for {} (DBID: {}) - identifier will not be updated.", this.getIdentifier(), this.getDbID());
+			logger.info(
+				"No suggested prefix OR COSV identifier for {} (DBID: {}) - identifier will not be updated.",
+				this.getIdentifier(), this.getDbID());
+		}
+	}
+
+	private boolean cosvIdentifierExists() {
+		return this.getCosvIdentifier() != null && !this.getCosvIdentifier().isEmpty();
+	}
+
+	private boolean suggestedPrefixIsCOSMICLegacyPrefix() {
+		return this.getSuggestedPrefix() != null &&
+			this.getSuggestedPrefix().equalsIgnoreCase(COSMICUpdateUtil.COSMIC_LEGACY_PREFIX);
+	}
+
+	private void updateUsingCOSVIdentifier(GKInstance modifiedInstanceEdit) throws Exception {
+		updateCOSMICDatabaseIdentifierInstance(this.getCosvIdentifier(), modifiedInstanceEdit);
+	}
+
+	private void updateUsingSuggestedCOSMICPrefix(GKInstance modifiedInstanceEdit) throws Exception {
+		GKInstance cosmicDatabaseIdentifierInstance = this.getCosmicDatabaseIdentifierInstance();
+		String currentCOSMICIdentifier = (String) cosmicDatabaseIdentifierInstance.getAttributeValue(ReactomeJavaConstants.identifier);
+		// If the current identifier already begins with "C" then leave it alone.
+		// This code is for updating numeric identifiers that have a suggested prefix.
+		if (!COSMICUpdateUtil.stringStartsWithC(currentCOSMICIdentifier.toUpperCase())) {
+			String newCOSMICIdentifier = this.getSuggestedPrefix() + currentCOSMICIdentifier;
+			updateCOSMICDatabaseIdentifierInstance(newCOSMICIdentifier, modifiedInstanceEdit);
 		}
 	}
 	
 	/**
 	 * Executes an update on an instance.
 	 * Sets the identifier attribute of <code>identifierObject</code> to the value of <code>identifierValue</code>.
-	 * <code>identifierObject</code> (which must be an InstanceEdit) will also have <code>modifiedForCOSMICUpdate</code> added to its <code>modified</code> list.
-	 * The display name of <code>identifierObject</code> will also be regenerated to reflect changes in <code>identifierValue</code>.
-	 * @param adaptor
-	 * @param modifiedForCOSMICUpdate An InstanceEdit which explains why an instance was modified.
-	 * @param identifierObject An object (probably a DatabaseIdentifier, though there is no actual restriction on type at this point) that represents a COSMIC identifier.
+	 * <code>identifierObject</code> (which must be an InstanceEdit) will also have <code>modifiedForCOSMICUpdate</code>
+	 * added to its <code>modified</code> list.
+	 * The display name of <code>identifierObject</code> will also be regenerated to reflect changes in
+	 * <code>identifierValue</code>.
 	 * @param identifierValue An identifier value that will be set on <code>identifierObject</code>
+	 * @param modifiedInstanceEdit An InstanceEdit which explains why an instance was modified.
 	 * @throws InvalidAttributeException
 	 * @throws Exception
 	 * @throws InvalidAttributeValueException
 	 */
-	private void updateIdentifierObject(
-		MySQLAdaptor adaptor, GKInstance modifiedForCOSMICUpdate, GKInstance identifierObject, String identifierValue
+	private void updateCOSMICDatabaseIdentifierInstance(
+		String identifierValue, GKInstance modifiedInstanceEdit
 	) throws InvalidAttributeException, Exception, InvalidAttributeValueException {
+		GKInstance cosmicDatabaseIdentifierInstance = getCosmicDatabaseIdentifierInstance();
 		// Set the identifier value.
-		identifierObject.setAttributeValue(ReactomeJavaConstants.identifier, identifierValue);
+		cosmicDatabaseIdentifierInstance.setAttributeValue(ReactomeJavaConstants.identifier, identifierValue);
 		
 		// Add the instance edit to the modified list
-		List<GKInstance> modifications = (List<GKInstance>) identifierObject.getAttributeValuesList(ReactomeJavaConstants.modified);
-		modifications.add(modifiedForCOSMICUpdate);
-		identifierObject.setAttributeValue(ReactomeJavaConstants.modified, modifications);
+		List<GKInstance> modifications =
+			(List<GKInstance>) cosmicDatabaseIdentifierInstance.getAttributeValuesList(ReactomeJavaConstants.modified);
+		modifications.add(modifiedInstanceEdit);
+		cosmicDatabaseIdentifierInstance.setAttributeValue(ReactomeJavaConstants.modified, modifications);
 		
 		// Update the displayname after other changes (setDisplayName will generate a new value and then set it)
-		InstanceDisplayNameGenerator.setDisplayName(identifierObject);
-		
-		adaptor.updateInstanceAttribute(identifierObject, ReactomeJavaConstants.identifier);
-		adaptor.updateInstanceAttribute(identifierObject, ReactomeJavaConstants.modified);
-		adaptor.updateInstanceAttribute(identifierObject, ReactomeJavaConstants._displayName);
+		InstanceDisplayNameGenerator.setDisplayName(cosmicDatabaseIdentifierInstance);
+
+		MySQLAdaptor adaptor = (MySQLAdaptor) cosmicDatabaseIdentifierInstance.getDbAdaptor();
+		adaptor.updateInstanceAttribute(cosmicDatabaseIdentifierInstance, ReactomeJavaConstants.identifier);
+		adaptor.updateInstanceAttribute(cosmicDatabaseIdentifierInstance, ReactomeJavaConstants.modified);
+		adaptor.updateInstanceAttribute(cosmicDatabaseIdentifierInstance, ReactomeJavaConstants._displayName);
+	}
+
+	private long getDbID() {
+		return getCosmicDatabaseIdentifierInstance().getDBID();
 	}
 }
