@@ -1,5 +1,6 @@
 package org.reactome.release.cosmicupdate;
 
+import java.sql.SQLException;
 import java.time.Duration;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -12,6 +13,7 @@ import org.gk.persistence.MySQLAdaptor;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
+import org.reactome.release.common.database.InstanceEditUtils;
 
 public class Main {
 	private static final Logger logger = LogManager.getLogger();
@@ -33,6 +35,7 @@ public class Main {
 
 	private Config config;
 	private COSMICFileManager cosmicFileManager;
+	private GKInstance modifiedInstanceEdit;
 
 	public static void main(String[] args) throws Exception {
 		Main cosmicUpdateStep = new Main();
@@ -75,16 +78,17 @@ public class Main {
 
 			// Step 2: Get and filter COSMIC identifiers
 			MySQLAdaptor adaptor = getConfig().getDBA();
-			List<GKInstance> filteredCosmicObjects = getFilteredCosmicObjects(adaptor);
+			List<GKInstance> nonCOSVCosmicDatabaseIdentifierInstances =
+				getNonCOSVCosmicDatabaseIdentifierInstances(adaptor);
 
 			// Step 3: Process and validate identifiers
 			Map<String, List<COSMICIdentifierUpdater>> updaters =
-				COSMICUpdateUtil.determinePrefixes(filteredCosmicObjects);
+				COSMICUpdateUtil.determinePrefixes(nonCOSVCosmicDatabaseIdentifierInstances);
 			validateAndReportUpdates(updaters);
 
 			// Step 4: Perform updates if not in test mode
 			if (!getConfig().isTestMode()) {
-				updateIdentifiers(adaptor, updaters);
+				updateIdentifiers(updaters);
 			}
 		} finally {
 			// Step 5: Cleanup
@@ -92,12 +96,13 @@ public class Main {
 		}
 	}
 
-	private List<GKInstance> getFilteredCosmicObjects(MySQLAdaptor adaptor) throws Exception {
-		Collection<GKInstance> cosmicObjects = COSMICUpdateUtil.getCOSMICIdentifiers(adaptor);
-		logger.info("{} COSMIC identifiers", cosmicObjects.size());
+	private List<GKInstance> getNonCOSVCosmicDatabaseIdentifierInstances(MySQLAdaptor adaptor) throws Exception {
+		Collection<GKInstance> cosmicDatabaseIdentifierInstances =
+			COSMICUpdateUtil.getCOSMICDatabaseIdentifierInstances(adaptor);
+		logger.info("{} COSMIC identifiers", cosmicDatabaseIdentifierInstances.size());
 
 		// Filter out COSV prefixes
-		List<GKInstance> filteredObjects = cosmicObjects.parallelStream()
+		List<GKInstance> filteredObjects = cosmicDatabaseIdentifierInstances.parallelStream()
 			.filter(this::isNotCOSVPrefix)
 			.collect(Collectors.toList());
 
@@ -126,20 +131,18 @@ public class Main {
 
 	/**
 	 * Updates the identifiers that need updating.
-	 * @param adaptor
 	 * @param updates
 	 */
-	private void updateIdentifiers(MySQLAdaptor adaptor, Map<String, List<COSMICIdentifierUpdater>> updates) {
-		for (List<COSMICIdentifierUpdater> listOfUpdaters : updates.values()) {
-			listOfUpdaters.forEach(updater -> {
-				try {
-					updater.updateIdentifier(adaptor, getConfig().getPersonId());
-				} catch (Exception e) {
-					logger.error("Exception caught while trying to update identifier: " +
-						listOfUpdaters + " ; Exception is: ", e);
-				}
-			});
+	private void updateIdentifiers(Map<String, List<COSMICIdentifierUpdater>> updates) throws Exception {
+		for (COSMICIdentifierUpdater updater : getAllCOSMICIdentifierUpdaters(updates)) {
+			updater.updateIdentifier(getModifiedInstanceEdit());
 		}
+	}
+
+	private List<COSMICIdentifierUpdater> getAllCOSMICIdentifierUpdaters(
+		Map<String, List<COSMICIdentifierUpdater>> updates) {
+
+		return updates.values().stream().flatMap(List::stream).collect(Collectors.toList());
 	}
 
 	private Config getConfig() {
@@ -148,5 +151,18 @@ public class Main {
 
 	private COSMICFileManager getCosmicFileManager() {
 		return this.cosmicFileManager;
+	}
+
+	private GKInstance getModifiedInstanceEdit() throws Exception {
+		if (this.modifiedInstanceEdit == null) {
+			this.modifiedInstanceEdit =
+				InstanceEditUtils.createDefaultIE(
+					getConfig().getDBA(),
+					getConfig().getPersonId(),
+					true,
+					"Identifier was automatically updated to new identifier by COSMIC Update process."
+				);
+		}
+		return this.modifiedInstanceEdit;
 	}
 }
