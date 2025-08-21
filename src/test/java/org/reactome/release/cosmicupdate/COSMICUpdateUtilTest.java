@@ -24,8 +24,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-public class COSMICUpdateUtilTest
-{
+public class COSMICUpdateUtilTest {
 
 	private static final String IDENTIFIER_COSF1234 = "COSF1234";
 	private static final String IDENTIFIER_1234 = "1234";
@@ -47,8 +46,7 @@ public class COSMICUpdateUtilTest
 	private static final String MUTANT_HEADER =  COSMIC_LEGACY_MUTATION_ID + "\t" +  COSMIC_MUTATION_ID+ "\t" + COSMIC_GENOMIC_MUTATION_ID + "\n"; 
 	
 	@Before
-	public void setup() throws IOException
-	{
+	public void setup() throws IOException {
 		// need to create temp files to read.
 		createTestCosmicFusionExport();
 		createTestCosmicMutantExport();
@@ -57,8 +55,7 @@ public class COSMICUpdateUtilTest
 	}
 
 
-	private void createTestCosmicMutationTracking() throws IOException
-	{
+	private void createTestCosmicMutationTracking() throws IOException {
 		Path pathToMutationTracking = Files.createTempFile("mutationTracking", "csv");
 		this.COSMICMutationTrackingFile = pathToMutationTracking.toString();
 		Files.writeString(pathToMutationTracking, MUTANT_HEADER);
@@ -67,8 +64,7 @@ public class COSMICUpdateUtilTest
 	}
 
 
-	private void createTestCosmicMutantExport() throws IOException
-	{
+	private void createTestCosmicMutantExport() throws IOException {
 		Path pathToMutantExport = Files.createTempFile("mutantExport", "csv");
 		this.COSMICMutantExportFile = pathToMutantExport.toString();
 		Files.writeString(pathToMutantExport, MUTANT_HEADER);
@@ -77,8 +73,7 @@ public class COSMICUpdateUtilTest
 	}
 
 
-	private void createTestCosmicFusionExport() throws IOException
-	{
+	private void createTestCosmicFusionExport() throws IOException {
 		Path pathToCOSF = Files.createTempFile("COSF", "csv");
 		this.COSMICFusionExportFile = pathToCOSF.toString();
 		// we only use the FUSION_ID field from the COSMIC Fusion Export.
@@ -90,8 +85,7 @@ public class COSMICUpdateUtilTest
 	
 	
 	@Test
-	public void testValidateAgainstFiles()
-	{
+	public void testValidateAgainstFiles() {
 		Map<String, List<COSMICIdentifierUpdater>> updates = new HashMap<>();
 		
 		COSMICIdentifierUpdater updater1 = new COSMICIdentifierUpdater();
@@ -100,20 +94,16 @@ public class COSMICUpdateUtilTest
 		updates.put(IDENTIFIER_COSF1234, Arrays.asList(updater1));
 		updates.put(IDENTIFIER_5678, Arrays.asList(updater2));
 		
-		try
-		{
+		try {
 			COSMICUpdateUtil.validateIdentifiersAgainstFiles(updates, COSMICFusionExportFile, COSMICMutationTrackingFile, COSMICMutantExportFile);
-		}
-		catch (IOException e)
-		{
+		} catch (IOException e) {
 			e.printStackTrace();
 			fail();
 		}		
 	}
 	
 	@Test
-	public void testDeterminePrefixes() throws InvalidAttributeException, IOException, Exception
-	{
+	public void testDeterminePrefixes() throws InvalidAttributeException, IOException, Exception {
 		Collection<GKInstance> cosmicObjects = new ArrayList<>();
 		Collection<GKInstance> EWASes = new ArrayList<>();
 		List<GKInstance> mockModResidues = new ArrayList<>();
@@ -182,23 +172,21 @@ public class COSMICUpdateUtilTest
 		cosmicObjects.add(mockCosmicObject3);
 
 		Path reportPath = Files.createTempDirectory("cosmic_update");
-		COSMICUpdateUtil.setReportsDirectoryPath(reportPath.toAbsolutePath().toString());
 		System.out.println("Reports will be in " + reportPath.toAbsolutePath().toString());
+		COSMICUpdateUtil.setReport(new Report(reportPath.toAbsolutePath().toString()));
+
 		// test with list
 		Map<String, List<COSMICIdentifierUpdater>> result = COSMICUpdateUtil.determinePrefixes(cosmicObjects);
 		assertNotNull(result);
 		assertTrue(!result.isEmpty());
 		
-		for (String s : result.keySet())
-		{
+		for (String s : result.keySet()) {
 			System.out.println(s + "\t" + result.get(s).toString());
-			if (s.contains(IDENTIFIER_44444))
-			{
+			if (s.contains(IDENTIFIER_44444)) {
 				// The 44444 COSMIC object should get COSF because of mismatch in one of the modified residues.
 				assertTrue(result.get(s).get(0).getSuggestedPrefix().equals("COSF"));
 			}
-			if (s.contains(IDENTIFIER_5678))
-			{
+			if (s.contains(IDENTIFIER_5678)) {
 				// This should have a COSM prefix.
 				assertTrue(result.get(s).get(0).getSuggestedPrefix().equals("COSM"));
 			}
@@ -209,21 +197,14 @@ public class COSMICUpdateUtilTest
 		boolean nonEWASReportExists = false;
 		DirectoryStream<Path> dirStream = Files.newDirectoryStream(reportPath);
 		
-		for (Path p : dirStream)
-		{
+		for (Path p : dirStream) {
 			String fileName = p.getFileName().toString();
-			if (fileName.endsWith(".csv"))
-			{
-				if (fileName.startsWith("COSMIC-identifiers-report"))
-				{
+			if (fileName.endsWith(".csv")) {
+				if (fileName.startsWith("COSMIC-identifiers-report")) {
 					identifersReportExists = true;
-				}
-				else if (fileName.startsWith("COSMICIdentifiersNoReferrers"))
-				{
+				} else if (fileName.startsWith("COSMICIdentifiersNoReferrers")) {
 					noReferrersReportExists = true;
-				}
-				else if (fileName.startsWith("nonEWASObjectsWithCOSMICIdentifiers"))
-				{
+				} else if (fileName.startsWith("nonEWASObjectsWithCOSMICIdentifiers")) {
 					nonEWASReportExists = true;
 				}
 			}
@@ -233,4 +214,3 @@ public class COSMICUpdateUtilTest
 		assertTrue(nonEWASReportExists);
 	}
 }
-
