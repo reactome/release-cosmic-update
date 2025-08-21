@@ -149,8 +149,9 @@ public class COSMICUpdateUtil {
 
 	/**
 	 * Determines the prefixes for COSMIC identifiers. The rule is:
-	 * IF an object has EWASes and there is an EWAS with a FragmentReplacedModification or a FragmentInsertionModification whose referenceSequence 
-	 * is NOT the referenceEntity of the EWAS... then the suggested prefix will be COSF (for Fusion), otherwise, COSM is suggested.
+	 * IF an object has EWASes and there is an EWAS with a FragmentReplacedModification or a
+	 * FragmentInsertionModification whose referenceSequence is NOT the referenceEntity of the EWAS... then the
+	 * suggested prefix will be COSF (for Fusion), otherwise, COSM is suggested.
 	 * @param cosmicObjects Objects that are identified by a COSMIC identifier.
 	 * @return A map of <code>COSMICIdentifierUpdater</code>, keyed by COSMIC identifier.
 	 * @throws Exception
@@ -287,8 +288,8 @@ public class COSMICUpdateUtil {
 	 * Queries the database for a ReferenceDatabase named "COSMIC" and then gets all DatabaseIdentifier objects
 	 * that refer to the COSMIC ReferenceDatabase via the referenceDatabase attribute.
 	 * This method will terminate the execution of the program if more than 1 "COSMIC" ReferenceDatabase is found.
-	 * If you plan to add more "COSMIC" ReferenceDatabase objects, this code will need to be changed to use the <em>correct</em> "COSMIC"
-	 * ReferenceDatabase.
+	 * If you plan to add more "COSMIC" ReferenceDatabase objects, this code will need to be changed to use the
+	 * <em>correct</em> "COSMIC" ReferenceDatabase.
 	 * @param adaptor
 	 * @return A Collection of DatabaseIdentifier objects.
 	 * @throws Exception
@@ -326,7 +327,9 @@ public class COSMICUpdateUtil {
 	}
 
 
-	private static List<COSMICIdentifierUpdater> getCosmicRecords(Map<String, List<COSMICIdentifierUpdater>> updaters) {
+	private static List<COSMICIdentifierUpdater> getCosmicRecords(
+		Map<String, List<COSMICIdentifierUpdater>> updaters) {
+
 		return updaters.values().parallelStream().flatMap(Collection::stream).sorted().collect(Collectors.toList());
 	}
 

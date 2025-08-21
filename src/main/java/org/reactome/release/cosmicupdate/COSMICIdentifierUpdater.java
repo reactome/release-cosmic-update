@@ -118,7 +118,8 @@ public class COSMICIdentifierUpdater implements Comparable<COSMICIdentifierUpdat
 		else if (suggestedPrefixIsCOSMICLegacyPrefix()) {
 			updateUsingSuggestedCOSMICPrefix(modifiedInstanceEdit);
 		}
-		// Some identifiers won't have a COSV identifier in the COSMIC files, and they might not have a suggested prefix either.
+		// Some identifiers won't have a COSV identifier in the COSMIC files, and they might not have a suggested
+		// prefix either.
 		else {
 			logger.info(
 				"No suggested prefix OR COSV identifier for {} (DBID: {}) - identifier will not be updated.",
@@ -141,7 +142,8 @@ public class COSMICIdentifierUpdater implements Comparable<COSMICIdentifierUpdat
 
 	private void updateUsingSuggestedCOSMICPrefix(GKInstance modifiedInstanceEdit) throws Exception {
 		GKInstance cosmicDatabaseIdentifierInstance = this.getCosmicDatabaseIdentifierInstance();
-		String currentCOSMICIdentifier = (String) cosmicDatabaseIdentifierInstance.getAttributeValue(ReactomeJavaConstants.identifier);
+		String currentCOSMICIdentifier = (String)
+			cosmicDatabaseIdentifierInstance.getAttributeValue(ReactomeJavaConstants.identifier);
 		// If the current identifier already begins with "C" then leave it alone.
 		// This code is for updating numeric identifiers that have a suggested prefix.
 		if (!COSMICUpdateUtil.stringStartsWithC(currentCOSMICIdentifier.toUpperCase())) {
@@ -153,8 +155,8 @@ public class COSMICIdentifierUpdater implements Comparable<COSMICIdentifierUpdat
 	/**
 	 * Executes an update on an instance.
 	 * Sets the identifier attribute of <code>identifierObject</code> to the value of <code>identifierValue</code>.
-	 * <code>identifierObject</code> (which must be an InstanceEdit) will also have <code>modifiedForCOSMICUpdate</code>
-	 * added to its <code>modified</code> list.
+	 * <code>identifierObject</code> (which must be an InstanceEdit) will also have
+	 * <code>modifiedForCOSMICUpdate</code> added to its <code>modified</code> list.
 	 * The display name of <code>identifierObject</code> will also be regenerated to reflect changes in
 	 * <code>identifierValue</code>.
 	 * @param identifierValue An identifier value that will be set on <code>identifierObject</code>
