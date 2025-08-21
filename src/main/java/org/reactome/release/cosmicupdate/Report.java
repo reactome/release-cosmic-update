@@ -12,8 +12,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 
 public class Report {
-    private static final String REPORTS_DIRECTORY_PATH = "reports";
-    
+    private String reportsDirectoryPath;
+
     private final String dateSuffix;
     
     private CSVPrinter nonEWASPrinter;
@@ -21,6 +21,13 @@ public class Report {
     private CSVPrinter identifierUpdatePrinter;
 
     public Report() {
+        this.reportsDirectoryPath = "reports";
+        this.dateSuffix = setDateSuffix();
+        initReports();
+    }
+
+    public Report(String reportsDirectoryPath) {
+        this.reportsDirectoryPath = reportsDirectoryPath;
         this.dateSuffix = setDateSuffix();
         initReports();
     }
@@ -55,19 +62,19 @@ public class Report {
     private void initReports() {
         try {
             createReportDirectoryIfNotExists();
-            
+
             nonEWASPrinter = new CSVPrinter(
-                new FileWriter(getNonEWASReportFileName()),
-                CSVFormat.DEFAULT.withHeader("COSMIC identifier", "non-EWAS entity")
+                    new FileWriter(getNonEWASReportFileName()),
+                    CSVFormat.DEFAULT.withHeader("COSMIC identifier", "non-EWAS entity")
             );
 
             identifiersWithNoReferrerPrinter = new CSVPrinter(
-                new FileWriter(getIdentifiersWithNoReferrerReportFileName()),
-                CSVFormat.DEFAULT.withHeader("COSMIC identifier")
+                    new FileWriter(getIdentifiersWithNoReferrerReportFileName()),
+                    CSVFormat.DEFAULT.withHeader("COSMIC identifier")
             );
             identifierUpdatePrinter = new CSVPrinter(
-                new FileWriter(getIdentifierUpdateReportFileName()),
-                CSVFormat.DEFAULT.withHeader(getIdentifierUpdateReportHeader())
+                    new FileWriter(getIdentifierUpdateReportFileName()),
+                    CSVFormat.DEFAULT.withHeader(getIdentifierUpdateReportHeader())
             );
         } catch (IOException e) {
             throw new RuntimeException("Unable to initialize reports", e);
@@ -75,30 +82,30 @@ public class Report {
     }
 
     private void createReportDirectoryIfNotExists() throws IOException {
-        Files.createDirectories(Paths.get(REPORTS_DIRECTORY_PATH));
+        Files.createDirectories(Paths.get(getReportsDirectoryPath()));
     }
 
     private String getNonEWASReportFileName() {
-        return REPORTS_DIRECTORY_PATH + "/nonEWASObjectsWithCOSMICIdentifiers_" + getDateSuffix() + ".csv";
+        return getReportsDirectoryPath() + "/nonEWASObjectsWithCOSMICIdentifiers_" + getDateSuffix() + ".csv";
     }
     
     private String getIdentifiersWithNoReferrerReportFileName() {
-        return REPORTS_DIRECTORY_PATH + "/COSMICIdentifiersNoReferrers_" + getDateSuffix() + ".csv";
+        return getReportsDirectoryPath() + "/COSMICIdentifiersNoReferrers_" + getDateSuffix() + ".csv";
     }
 
     private String getIdentifierUpdateReportFileName() {
-        return REPORTS_DIRECTORY_PATH + "/COSMIC-identifiers-report_" + getDateSuffix() + ".csv";
+        return getReportsDirectoryPath() + "/COSMIC-identifiers-report_" + getDateSuffix() + ".csv";
     }
 
     private static String[] getIdentifierUpdateReportHeader() {
         return Arrays.asList(
-                "DB_ID",
-                "Identifier",
-                "Suggested Prefix",
-                "Valid (according to COSMIC files)?",
-                "COSV identifier",
-                "Mutation IDs",
-                "COSMIC Search URL"
+            "DB_ID",
+            "Identifier",
+            "Suggested Prefix",
+            "Valid (according to COSMIC files)?",
+            "COSV identifier",
+            "Mutation IDs",
+            "COSMIC Search URL"
         ).toArray(new String[0]);
     }
 
@@ -109,5 +116,9 @@ public class Report {
 
     private String getDateSuffix() {
         return this.dateSuffix;
+    }
+
+    private String getReportsDirectoryPath() {
+        return this.reportsDirectoryPath;
     }
 }
