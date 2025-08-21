@@ -28,7 +28,7 @@ public class COSMICUpdateUtil {
 	private static final String COSMIC_LEGACY_MUTATION_ID = "LEGACY_MUTATION_ID";
 	private static final Logger logger = LogManager.getLogger();
 
-	private static Report report = new Report();
+	private static Report report;
 
 	// Private constructor to prevent instantiation of utility class
 	private COSMICUpdateUtil() {
@@ -181,7 +181,7 @@ public class COSMICUpdateUtil {
 		Collection<GKInstance> ewases = cosmicObject.getReferers(ReactomeJavaConstants.crossReference);
 
 		if (ewases == null || ewases.isEmpty()) {
-			report.printIdentifierWithNoReferrerRecord(identifier);
+			getReport().printIdentifierWithNoReferrerRecord(identifier);
 		} else {
 			checkEWASes(identifier, updater, ewases);
 		}
@@ -220,7 +220,7 @@ public class COSMICUpdateUtil {
 
 		for (GKInstance potentialEWAS : EWASes) {
 			if (!isValidEWAS(potentialEWAS)) {
-				report.printNonEWASRecord(identifier, potentialEWAS.toString());
+				getReport().printNonEWASRecord(identifier, potentialEWAS.toString());
 				continue;
 			}
 
@@ -317,7 +317,7 @@ public class COSMICUpdateUtil {
 	public static void printIdentifierUpdateReport(Map<String, List<COSMICIdentifierUpdater>> updaters) {
 
 		for (COSMICIdentifierUpdater record : getCosmicRecords(updaters)) {
-			report.printIdentifierUpdateRecord(getIdentifierUpdateReportLineValues(record));
+			getReport().printIdentifierUpdateRecord(getIdentifierUpdateReportLineValues(record));
 		}
 	}
 	
@@ -371,5 +371,17 @@ public class COSMICUpdateUtil {
 		}
 
 		return cosmicReferenceDatabaseInstances.iterator().next();
+	}
+
+	static void setReport(Report report) {
+		COSMICUpdateUtil.report = report;
+	}
+
+	private static Report getReport() {
+		if (report == null) {
+			setReport(new Report());
+		}
+
+		return report;
 	}
 }
