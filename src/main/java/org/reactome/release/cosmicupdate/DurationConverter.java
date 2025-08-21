@@ -10,8 +10,7 @@ import com.beust.jcommander.IStringConverter;
  * @author sshorser
  *
  */
-class DurationConverter implements IStringConverter<Duration>
-{
+class DurationConverter implements IStringConverter<Duration> {
 	@Override
 	public Duration convert(String value)
 	{

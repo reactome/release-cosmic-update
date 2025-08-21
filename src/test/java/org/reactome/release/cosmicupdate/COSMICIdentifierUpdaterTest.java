@@ -15,11 +15,7 @@ import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.reactome.release.common.database.InstanceEditUtils;
 
-public class COSMICIdentifierUpdaterTest
-{
-
-	private long creatorID = 112233445566L; 
-	
+public class COSMICIdentifierUpdaterTest {
 	@Mock
 	private MySQLAdaptor mockAdaptor;
 	
@@ -30,8 +26,7 @@ public class COSMICIdentifierUpdaterTest
 	private GKInstance mockIdentifierObject;
 	
 	@Before
-	public void set()
-	{
+	public void set() {
 		MockitoAnnotations.openMocks(this);
 	}
 	
@@ -39,24 +34,19 @@ public class COSMICIdentifierUpdaterTest
 	 * Tests attempting to update, but with no COSV identifier set, no update will happen.
 	 */
 	@Test
-	public void testUpdateIdentifierNoUpdate()
-	{
+	public void testUpdateIdentifierNoUpdate() {
 		COSMICIdentifierUpdater updater = new COSMICIdentifierUpdater();
 		updater.setIdentifier("123456");
 		// We don't set a COSV identifier, triggering the "no update" execution path.
 		updater.setValid(true);
-		updater.setDbID(123465789L);
-		
-		try
-		{
-			try(MockedStatic<InstanceEditUtils> mockedStatic = Mockito.mockStatic(InstanceEditUtils.class))
-			{
+		updater.setCosmicDatabaseIdentifierInstance(mockIdentifierObject);
+
+		try {
+			try(MockedStatic<InstanceEditUtils> mockedStatic = Mockito.mockStatic(InstanceEditUtils.class)) {
 				Mockito.when(InstanceEditUtils.createDefaultIE(any(MySQLAdaptor.class), any(Long.class), any(Boolean.class), any(String.class))).thenReturn(mockInstanceEdit);
-				updater.updateIdentfier(mockAdaptor, creatorID);
+				updater.updateIdentifier(mockInstanceEdit);
 			}
-		}
-		catch (Exception e)
-		{
+		} catch (Exception e) {
 			e.printStackTrace();
 			fail();
 		}
@@ -66,28 +56,25 @@ public class COSMICIdentifierUpdaterTest
 	 * Tests an update.
 	 */
 	@Test
-	public void testUpdateIdentifier()
-	{
+	public void testUpdateIdentifier() {
 		COSMICIdentifierUpdater updater = new COSMICIdentifierUpdater();
 		updater.setIdentifier("123456");
 		updater.setSuggestedPrefix("COSV");
 		updater.setCosvIdentifier("COSV9393993");
 		updater.setValid(true);
-		updater.setDbID(123465789L);
-		
-		try
-		{
+		updater.setCosmicDatabaseIdentifierInstance(mockIdentifierObject);
+
+		try {
 			try(MockedStatic<InstanceEditUtils> mockedInstEdUtils = Mockito.mockStatic(InstanceEditUtils.class);
-				MockedStatic<InstanceDisplayNameGenerator> mockedInstDisNameGen = Mockito.mockStatic(InstanceDisplayNameGenerator.class))
-			{
+				MockedStatic<InstanceDisplayNameGenerator> mockedInstDisNameGen = Mockito.mockStatic(InstanceDisplayNameGenerator.class)) {
+
+				Mockito.when(mockIdentifierObject.getDbAdaptor()).thenReturn(mockAdaptor);
 				Mockito.when(InstanceEditUtils.createDefaultIE(any(MySQLAdaptor.class), any(Long.class), any(Boolean.class), any(String.class))).thenReturn(mockInstanceEdit);
 				Mockito.when(InstanceDisplayNameGenerator.generateDisplayName(any(GKInstance.class))).thenReturn("TestDisplayName");
 				Mockito.when(mockAdaptor.fetchInstance(any(Long.class))).thenReturn(mockIdentifierObject);
-				updater.updateIdentfier(mockAdaptor, creatorID);
+				updater.updateIdentifier(mockInstanceEdit);
 			}
-		}
-		catch (Exception e)
-		{
+		} catch (Exception e) {
 			e.printStackTrace();
 			fail();
 		}
@@ -97,30 +84,27 @@ public class COSMICIdentifierUpdaterTest
 	 * Tests update with a COSM suggested prefix and no COSV identifier.
 	 */
 	@Test
-	public void testUpdateCOSMIdentifier()
-	{
+	public void testUpdateCOSMIdentifier() {
 		COSMICIdentifierUpdater updater = new COSMICIdentifierUpdater();
 		updater.setIdentifier("123456");
 		updater.setSuggestedPrefix("COSM");
 		// testing COSM so don't set a COSV identifier.
 		updater.setValid(true);
-		updater.setDbID(123465789L);
-		
-		try
-		{
+		updater.setCosmicDatabaseIdentifierInstance(mockIdentifierObject);
+
+		try {
 			try(MockedStatic<InstanceEditUtils> mockedInstEdUtils = Mockito.mockStatic(InstanceEditUtils.class);
-				MockedStatic<InstanceDisplayNameGenerator> mockedInstDisNameGen = Mockito.mockStatic(InstanceDisplayNameGenerator.class))
-			{
+				MockedStatic<InstanceDisplayNameGenerator> mockedInstDisNameGen = Mockito.mockStatic(InstanceDisplayNameGenerator.class)) {
+
+				Mockito.when(mockIdentifierObject.getDbAdaptor()).thenReturn(mockAdaptor);
 				Mockito.when(InstanceEditUtils.createDefaultIE(any(MySQLAdaptor.class), any(Long.class), any(Boolean.class), any(String.class))).thenReturn(mockInstanceEdit);
 				Mockito.when(InstanceDisplayNameGenerator.generateDisplayName(any(GKInstance.class))).thenReturn("TestDisplayName");
 				Mockito.when(mockIdentifierObject.getAttributeValue(ReactomeJavaConstants.identifier)).thenReturn("3333");
 				Mockito.when(mockAdaptor.fetchInstance(any(Long.class))).thenReturn(mockIdentifierObject);
 				
-				updater.updateIdentfier(mockAdaptor, creatorID);
+				updater.updateIdentifier(mockInstanceEdit);
 			}
-		}
-		catch (Exception e)
-		{
+		} catch (Exception e) {
 			e.printStackTrace();
 			fail();
 		}
