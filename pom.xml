@@ -1,9 +1,52 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
+
 	<groupId>org.reactome.release</groupId>
 	<artifactId>cosmic-update</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	
+	<packaging>jar</packaging>
+
+	<name>cosmic-update</name>
+	<description>
+		Synchronization of gk_central COSMIC Database Identifier instances (https://cancer.sanger.ac.uk/cosmic)
+	</description>
+	<url>https://github.com/reactome/release-cosmic-update</url>
+	<organization>
+		<name>Reactome</name>
+		<url>https://reactome.org</url>
+	</organization>
+	<licenses>
+		<license>
+			<name>The Apache Software License, Version 2.0</name>
+			<url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+		</license>
+	</licenses>
+
+	<developers>
+		<developer>
+			<name>Solomon Shorser</name>
+			<organization>Ontario Institute of Cancer Research</organization>
+			<organizationUrl>https://oicr.on.ca</organizationUrl>
+			<roles>
+				<role>alumni</role>
+			</roles>
+		</developer>
+
+		<developer>
+			<name>Joel Weiser</name>
+			<email>jweiser@oicr.on.ca</email>
+			<organization>Ontario Institute for Cancer Research</organization>
+			<organizationUrl>https://oicr.on.ca</organizationUrl>
+		</developer>
+	</developers>
+
+	<scm>
+		<connection>scm:git:git://github.com/reactome/release-cosmic-update.git</connection>
+		<developerConnection>scm:git:ssh://github.com/reactome/release-cosmic-update.git</developerConnection>
+		<url>https://github.com/reactome/release-cosmic-update</url>
+		<tag>main</tag>
+	</scm>
+
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<junit.version>5.1.0</junit.version>
@@ -12,15 +55,6 @@
 		<maven.compiler.target>11</maven.compiler.target>
 		<maven.compiler.source>11</maven.compiler.source>
 	</properties>
-	
-	<developers>
-		<developer>
-			<email>solomon.shorser@oicr.on.ca</email>
-			<name>Solomon Shorser</name>
-			<organization>Ontario Institute of Cancer Research</organization>
-			<organizationUrl>https://oicr.on.ca</organizationUrl>
-		</developer>
-	</developers>
 	
 	<dependencies>
 		<dependency>
