@@ -12,8 +12,7 @@ import com.beust.jcommander.IStringConverter;
  */
 class DurationConverter implements IStringConverter<Duration> {
 	@Override
-	public Duration convert(String value)
-	{
+	public Duration convert(String value) {
 		return Duration.parse(value);
 	}
 }
