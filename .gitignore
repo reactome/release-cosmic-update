@@ -28,11 +28,13 @@ hs_err_pid*
 .project
 .settings
 target
+.idea/
 
 # Project-specific
 *.tsv.gz
 *.tsv
 *.csv
+*.sql.gz
 reports/*
 *.log
 logs/*
