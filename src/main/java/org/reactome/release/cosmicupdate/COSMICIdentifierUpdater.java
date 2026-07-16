@@ -20,14 +20,15 @@ import static org.reactome.release.cosmicupdate.COSMICUpdateUtil.getPersonId;
 public class COSMICIdentifierUpdater implements Comparable<COSMICIdentifierUpdater> {
 	private static final Logger logger = LogManager.getLogger();
 
-	private CuratorToolAPI curatorToolAPI = new CuratorToolAPI();
-
 	private String identifier;
 	private SimpleInstance cosmicDatabaseIdentifierInstance;
 	private String suggestedPrefix;
 	private boolean valid;
 	private Set<String> mutationIDs = new HashSet<>();
 	private String cosvIdentifier;
+
+	public COSMICIdentifierUpdater() {
+	}
 
 	public String getIdentifier() {
 		return this.identifier;
@@ -104,15 +105,16 @@ public class COSMICIdentifierUpdater implements Comparable<COSMICIdentifierUpdat
 
 	/**
 	 * Perform an update of a COSMIC identifier.
+	 * @param curatorToolAPI The CuratorToolAPI object used to update the database.
 	 */
-	public void updateIdentifier() {
+	public void updateIdentifier(CuratorToolAPI curatorToolAPI) {
 		// If there is a COSV identifier, we'll update using that.
 		if (cosvIdentifierExists()) {
-			updateUsingCOSVIdentifier();
+			updateUsingCOSVIdentifier(curatorToolAPI);
 		}
 		// If no COSV identifier was found, update using the suggested prefix (determined computationally).
 		else if (suggestedPrefixIsCOSMICLegacyPrefix()) {
-			updateUsingSuggestedCOSMICPrefix();
+			updateUsingSuggestedCOSMICPrefix(curatorToolAPI);
 		}
 		// Some identifiers won't have a COSV identifier in the COSMIC files, and they might not have a suggested
 		// prefix either.
@@ -141,11 +143,11 @@ public class COSMICIdentifierUpdater implements Comparable<COSMICIdentifierUpdat
 			this.getSuggestedPrefix().equalsIgnoreCase(COSMICUpdateUtil.COSMIC_LEGACY_PREFIX);
 	}
 
-	private void updateUsingCOSVIdentifier() {
-		updateCOSMICDatabaseIdentifierInstance(this.getCosvIdentifier());
+	private void updateUsingCOSVIdentifier(CuratorToolAPI curatorToolAPI) {
+		updateCOSMICDatabaseIdentifierInstance(this.getCosvIdentifier(), curatorToolAPI);
 	}
 
-	private void updateUsingSuggestedCOSMICPrefix() {
+	private void updateUsingSuggestedCOSMICPrefix(CuratorToolAPI curatorToolAPI) {
 		SimpleInstance cosmicDatabaseIdentifierInstance = this.getCosmicDatabaseIdentifierInstance();
 		String currentCOSMICIdentifier = (String)
 			cosmicDatabaseIdentifierInstance.getAttribute(ReactomeJavaConstants.identifier);
@@ -153,7 +155,7 @@ public class COSMICIdentifierUpdater implements Comparable<COSMICIdentifierUpdat
 		// This code is for updating numeric identifiers that have a suggested prefix.
 		if (!COSMICUpdateUtil.stringStartsWithC(currentCOSMICIdentifier.toUpperCase())) {
 			String newCOSMICIdentifier = this.getSuggestedPrefix() + currentCOSMICIdentifier;
-			updateCOSMICDatabaseIdentifierInstance(newCOSMICIdentifier);
+			updateCOSMICDatabaseIdentifierInstance(newCOSMICIdentifier, curatorToolAPI);
 		}
 	}
 	
@@ -166,15 +168,15 @@ public class COSMICIdentifierUpdater implements Comparable<COSMICIdentifierUpdat
 	 * <code>identifierValue</code>.
 	 * @param identifierValue An identifier value that will be set on <code>identifierObject</code>
 	 */
-	private void updateCOSMICDatabaseIdentifierInstance(String identifierValue) {
+	private void updateCOSMICDatabaseIdentifierInstance(String identifierValue, CuratorToolAPI curatorToolAPI) {
 		SimpleInstance cosmicDatabaseIdentifierInstance = getCosmicDatabaseIdentifierInstance();
 		cosmicDatabaseIdentifierInstance.setAttribute(ReactomeJavaConstants.identifier, identifierValue);
 		cosmicDatabaseIdentifierInstance.setDisplayName(generateDisplayName(cosmicDatabaseIdentifierInstance));
 
-		updateInDatabase(cosmicDatabaseIdentifierInstance);
+		updateInDatabase(cosmicDatabaseIdentifierInstance, curatorToolAPI);
 	}
 
-	private void updateInDatabase(SimpleInstance instance) {
+	private void updateInDatabase(SimpleInstance instance, CuratorToolAPI curatorToolAPI) {
 		instance.setDefaultPersonId(getPersonId());
 		curatorToolAPI.commit(instance);
 	}

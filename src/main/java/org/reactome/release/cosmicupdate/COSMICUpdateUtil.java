@@ -28,7 +28,7 @@ public class COSMICUpdateUtil {
 
 	private static Report report;
 
-	private static CuratorToolAPI curatorToolAPI = new CuratorToolAPI();
+	private static CuratorToolAPI curatorToolAPI;
 	private static long personId;
 
 	// Private constructor to prevent instantiation of utility class
@@ -302,6 +302,10 @@ public class COSMICUpdateUtil {
 	
 	public static boolean stringStartsWithC(String s) {
 		return s.startsWith("C");
+	}
+
+	public static void setCuratorToolAPI(CuratorToolAPI curatorToolAPI) {
+		COSMICUpdateUtil.curatorToolAPI = curatorToolAPI;
 	}
 
 	public static void setPersonId(long personId) {

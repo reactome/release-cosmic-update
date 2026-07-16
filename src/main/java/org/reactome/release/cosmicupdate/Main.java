@@ -12,6 +12,7 @@ import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import org.reactome.curation.model.SimpleInstance;
 
+import static org.reactome.release.cosmicupdate.COSMICUpdateUtil.setCuratorToolAPI;
 import static org.reactome.release.cosmicupdate.COSMICUpdateUtil.setPersonId;
 
 public class Main {
@@ -34,6 +35,7 @@ public class Main {
 
 	private Config config;
 	private COSMICFileManager cosmicFileManager;
+	private CuratorToolAPI curatorToolAPI;
 
 	public static void main(String[] args) throws Exception {
 		Main cosmicUpdateStep = new Main();
@@ -51,6 +53,7 @@ public class Main {
 	public void executeStep() throws Exception {
 		this.config = new Config(this.configPath);
 		this.cosmicFileManager = new COSMICFileManager(this.config);
+		this.curatorToolAPI = new CuratorToolAPI();
 
 		redownloadFilesIfTooOld(this.fileAge);
 
@@ -75,6 +78,7 @@ public class Main {
 			getCosmicFileManager().unzipFiles();
 
 			// Step 2: Get and filter COSMIC identifiers
+			setCuratorToolAPI(curatorToolAPI);
 			List<SimpleInstance> nonCOSVCosmicDatabaseIdentifierInstances =
 				getNonCOSVCosmicDatabaseIdentifierInstances();
 
@@ -91,6 +95,7 @@ public class Main {
 		} finally {
 			// Step 5: Cleanup
 			getCosmicFileManager().cleanupFiles();
+			curatorToolAPI.close();
 		}
 	}
 
@@ -133,7 +138,7 @@ public class Main {
 	 */
 	private void updateIdentifiers(Map<String, List<COSMICIdentifierUpdater>> updates) throws Exception {
 		for (COSMICIdentifierUpdater updater : getAllCOSMICIdentifierUpdaters(updates)) {
-			updater.updateIdentifier();
+			updater.updateIdentifier(this.curatorToolAPI);
 		}
 	}
 

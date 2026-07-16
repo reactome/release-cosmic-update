@@ -14,7 +14,10 @@ import org.reactome.curation.model.SimpleInstance;
 public class COSMICIdentifierUpdaterTest {
 	@Mock
 	private SimpleInstance mockIdentifierObject;
-	
+
+	@Mock
+	private CuratorToolAPI mockCuratorToolAPI;
+
 	@Before
 	public void set() {
 		MockitoAnnotations.openMocks(this);
@@ -32,7 +35,7 @@ public class COSMICIdentifierUpdaterTest {
 		updater.setCosmicDatabaseIdentifierInstance(mockIdentifierObject);
 
 		try {
-			updater.updateIdentifier();
+			updater.updateIdentifier(mockCuratorToolAPI);
 		} catch (Exception e) {
 			e.printStackTrace();
 			fail();
@@ -53,8 +56,7 @@ public class COSMICIdentifierUpdaterTest {
 
 		try {
 			Mockito.when(updater.generateDisplayName(any(SimpleInstance.class))).thenReturn("TestDisplayName");
-			//Mockito.when(mockAdaptor.fetchInstance(any(Long.class))).thenReturn(mockIdentifierObject);
-			updater.updateIdentifier();
+			updater.updateIdentifier(mockCuratorToolAPI);
 		} catch (Exception e) {
 			e.printStackTrace();
 			fail();
@@ -76,9 +78,8 @@ public class COSMICIdentifierUpdaterTest {
 		try {
 			Mockito.when(updater.generateDisplayName(any(SimpleInstance.class))).thenReturn("TestDisplayName");
 			Mockito.when(mockIdentifierObject.getAttribute(ReactomeJavaConstants.identifier)).thenReturn("3333");
-			//Mockito.when(mockAdaptor.fetchInstance(any(Long.class))).thenReturn(mockIdentifierObject);
 
-			updater.updateIdentifier();
+			updater.updateIdentifier(mockCuratorToolAPI);
 		} catch (Exception e) {
 			e.printStackTrace();
 			fail();
