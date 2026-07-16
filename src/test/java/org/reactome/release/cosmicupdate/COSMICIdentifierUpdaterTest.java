@@ -3,27 +3,17 @@ package org.reactome.release.cosmicupdate;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 
-import org.gk.model.GKInstance;
-import org.gk.model.InstanceDisplayNameGenerator;
 import org.gk.model.ReactomeJavaConstants;
-import org.gk.persistence.MySQLAdaptor;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
-import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
-import org.reactome.release.common.database.InstanceEditUtils;
+import org.reactome.curation.model.SimpleInstance;
 
 public class COSMICIdentifierUpdaterTest {
 	@Mock
-	private MySQLAdaptor mockAdaptor;
-	
-	@Mock
-	private GKInstance mockInstanceEdit;
-	
-	@Mock
-	private GKInstance mockIdentifierObject;
+	private SimpleInstance mockIdentifierObject;
 	
 	@Before
 	public void set() {
@@ -42,10 +32,7 @@ public class COSMICIdentifierUpdaterTest {
 		updater.setCosmicDatabaseIdentifierInstance(mockIdentifierObject);
 
 		try {
-			try(MockedStatic<InstanceEditUtils> mockedStatic = Mockito.mockStatic(InstanceEditUtils.class)) {
-				Mockito.when(InstanceEditUtils.createDefaultIE(any(MySQLAdaptor.class), any(Long.class), any(Boolean.class), any(String.class))).thenReturn(mockInstanceEdit);
-				updater.updateIdentifier(mockInstanceEdit);
-			}
+			updater.updateIdentifier();
 		} catch (Exception e) {
 			e.printStackTrace();
 			fail();
@@ -65,15 +52,9 @@ public class COSMICIdentifierUpdaterTest {
 		updater.setCosmicDatabaseIdentifierInstance(mockIdentifierObject);
 
 		try {
-			try(MockedStatic<InstanceEditUtils> mockedInstEdUtils = Mockito.mockStatic(InstanceEditUtils.class);
-				MockedStatic<InstanceDisplayNameGenerator> mockedInstDisNameGen = Mockito.mockStatic(InstanceDisplayNameGenerator.class)) {
-
-				Mockito.when(mockIdentifierObject.getDbAdaptor()).thenReturn(mockAdaptor);
-				Mockito.when(InstanceEditUtils.createDefaultIE(any(MySQLAdaptor.class), any(Long.class), any(Boolean.class), any(String.class))).thenReturn(mockInstanceEdit);
-				Mockito.when(InstanceDisplayNameGenerator.generateDisplayName(any(GKInstance.class))).thenReturn("TestDisplayName");
-				Mockito.when(mockAdaptor.fetchInstance(any(Long.class))).thenReturn(mockIdentifierObject);
-				updater.updateIdentifier(mockInstanceEdit);
-			}
+			Mockito.when(updater.generateDisplayName(any(SimpleInstance.class))).thenReturn("TestDisplayName");
+			//Mockito.when(mockAdaptor.fetchInstance(any(Long.class))).thenReturn(mockIdentifierObject);
+			updater.updateIdentifier();
 		} catch (Exception e) {
 			e.printStackTrace();
 			fail();
@@ -93,17 +74,11 @@ public class COSMICIdentifierUpdaterTest {
 		updater.setCosmicDatabaseIdentifierInstance(mockIdentifierObject);
 
 		try {
-			try(MockedStatic<InstanceEditUtils> mockedInstEdUtils = Mockito.mockStatic(InstanceEditUtils.class);
-				MockedStatic<InstanceDisplayNameGenerator> mockedInstDisNameGen = Mockito.mockStatic(InstanceDisplayNameGenerator.class)) {
+			Mockito.when(updater.generateDisplayName(any(SimpleInstance.class))).thenReturn("TestDisplayName");
+			Mockito.when(mockIdentifierObject.getAttribute(ReactomeJavaConstants.identifier)).thenReturn("3333");
+			//Mockito.when(mockAdaptor.fetchInstance(any(Long.class))).thenReturn(mockIdentifierObject);
 
-				Mockito.when(mockIdentifierObject.getDbAdaptor()).thenReturn(mockAdaptor);
-				Mockito.when(InstanceEditUtils.createDefaultIE(any(MySQLAdaptor.class), any(Long.class), any(Boolean.class), any(String.class))).thenReturn(mockInstanceEdit);
-				Mockito.when(InstanceDisplayNameGenerator.generateDisplayName(any(GKInstance.class))).thenReturn("TestDisplayName");
-				Mockito.when(mockIdentifierObject.getAttributeValue(ReactomeJavaConstants.identifier)).thenReturn("3333");
-				Mockito.when(mockAdaptor.fetchInstance(any(Long.class))).thenReturn(mockIdentifierObject);
-				
-				updater.updateIdentifier(mockInstanceEdit);
-			}
+			updater.updateIdentifier();
 		} catch (Exception e) {
 			e.printStackTrace();
 			fail();

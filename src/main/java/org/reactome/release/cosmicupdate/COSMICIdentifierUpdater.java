@@ -1,18 +1,14 @@
 package org.reactome.release.cosmicupdate;
 
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.gk.model.GKInstance;
-import org.gk.model.InstanceDisplayNameGenerator;
 import org.gk.model.ReactomeJavaConstants;
-import org.gk.persistence.MySQLAdaptor;
-import org.gk.schema.InvalidAttributeException;
-import org.gk.schema.InvalidAttributeValueException;
-import org.reactome.release.common.database.InstanceEditUtils;
+import org.reactome.curation.model.SimpleInstance;
+
+import static org.reactome.release.cosmicupdate.COSMICUpdateUtil.getPersonId;
 
 /**
  * Updates a COSMIC Identifier.
@@ -24,8 +20,10 @@ import org.reactome.release.common.database.InstanceEditUtils;
 public class COSMICIdentifierUpdater implements Comparable<COSMICIdentifierUpdater> {
 	private static final Logger logger = LogManager.getLogger();
 
+	private CuratorToolAPI curatorToolAPI = new CuratorToolAPI();
+
 	private String identifier;
-	private GKInstance cosmicDatabaseIdentifierInstance;
+	private SimpleInstance cosmicDatabaseIdentifierInstance;
 	private String suggestedPrefix;
 	private boolean valid;
 	private Set<String> mutationIDs = new HashSet<>();
@@ -39,11 +37,11 @@ public class COSMICIdentifierUpdater implements Comparable<COSMICIdentifierUpdat
 		this.identifier = identifier;
 	}
 
-	public GKInstance getCosmicDatabaseIdentifierInstance() {
+	public SimpleInstance getCosmicDatabaseIdentifierInstance() {
 		return this.cosmicDatabaseIdentifierInstance;
 	}
 
-	public void setCosmicDatabaseIdentifierInstance(GKInstance cosmicDatabaseIdentifierInstance) {
+	public void setCosmicDatabaseIdentifierInstance(SimpleInstance cosmicDatabaseIdentifierInstance) {
 		this.cosmicDatabaseIdentifierInstance = cosmicDatabaseIdentifierInstance;
 	}
 
@@ -106,17 +104,15 @@ public class COSMICIdentifierUpdater implements Comparable<COSMICIdentifierUpdat
 
 	/**
 	 * Perform an update of a COSMIC identifier.
-	 * @param modifiedInstanceEdit
-	 * @throws Exception
 	 */
-	public void updateIdentifier(GKInstance modifiedInstanceEdit) throws Exception {
+	public void updateIdentifier() {
 		// If there is a COSV identifier, we'll update using that.
 		if (cosvIdentifierExists()) {
-			updateUsingCOSVIdentifier(modifiedInstanceEdit);
+			updateUsingCOSVIdentifier();
 		}
 		// If no COSV identifier was found, update using the suggested prefix (determined computationally).
 		else if (suggestedPrefixIsCOSMICLegacyPrefix()) {
-			updateUsingSuggestedCOSMICPrefix(modifiedInstanceEdit);
+			updateUsingSuggestedCOSMICPrefix();
 		}
 		// Some identifiers won't have a COSV identifier in the COSMIC files, and they might not have a suggested
 		// prefix either.
@@ -125,6 +121,15 @@ public class COSMICIdentifierUpdater implements Comparable<COSMICIdentifierUpdat
 				"No suggested prefix OR COSV identifier for {} (DBID: {}) - identifier will not be updated.",
 				this.getIdentifier(), this.getDbID());
 		}
+	}
+
+	String generateDisplayName(SimpleInstance cosmicDatabaseIdentifierInstance) {
+		SimpleInstance referenceDatabase =
+			(SimpleInstance) cosmicDatabaseIdentifierInstance.getAttribute(ReactomeJavaConstants.referenceDatabase);
+		String referenceDatabaseName = referenceDatabase.getDisplayName();
+		String identifier = (String) cosmicDatabaseIdentifierInstance.getAttribute(ReactomeJavaConstants.identifier);
+
+		return referenceDatabaseName + ":" + identifier;
 	}
 
 	private boolean cosvIdentifierExists() {
@@ -136,19 +141,19 @@ public class COSMICIdentifierUpdater implements Comparable<COSMICIdentifierUpdat
 			this.getSuggestedPrefix().equalsIgnoreCase(COSMICUpdateUtil.COSMIC_LEGACY_PREFIX);
 	}
 
-	private void updateUsingCOSVIdentifier(GKInstance modifiedInstanceEdit) throws Exception {
-		updateCOSMICDatabaseIdentifierInstance(this.getCosvIdentifier(), modifiedInstanceEdit);
+	private void updateUsingCOSVIdentifier() {
+		updateCOSMICDatabaseIdentifierInstance(this.getCosvIdentifier());
 	}
 
-	private void updateUsingSuggestedCOSMICPrefix(GKInstance modifiedInstanceEdit) throws Exception {
-		GKInstance cosmicDatabaseIdentifierInstance = this.getCosmicDatabaseIdentifierInstance();
+	private void updateUsingSuggestedCOSMICPrefix() {
+		SimpleInstance cosmicDatabaseIdentifierInstance = this.getCosmicDatabaseIdentifierInstance();
 		String currentCOSMICIdentifier = (String)
-			cosmicDatabaseIdentifierInstance.getAttributeValue(ReactomeJavaConstants.identifier);
+			cosmicDatabaseIdentifierInstance.getAttribute(ReactomeJavaConstants.identifier);
 		// If the current identifier already begins with "C" then leave it alone.
 		// This code is for updating numeric identifiers that have a suggested prefix.
 		if (!COSMICUpdateUtil.stringStartsWithC(currentCOSMICIdentifier.toUpperCase())) {
 			String newCOSMICIdentifier = this.getSuggestedPrefix() + currentCOSMICIdentifier;
-			updateCOSMICDatabaseIdentifierInstance(newCOSMICIdentifier, modifiedInstanceEdit);
+			updateCOSMICDatabaseIdentifierInstance(newCOSMICIdentifier);
 		}
 	}
 	
@@ -160,34 +165,21 @@ public class COSMICIdentifierUpdater implements Comparable<COSMICIdentifierUpdat
 	 * The display name of <code>identifierObject</code> will also be regenerated to reflect changes in
 	 * <code>identifierValue</code>.
 	 * @param identifierValue An identifier value that will be set on <code>identifierObject</code>
-	 * @param modifiedInstanceEdit An InstanceEdit which explains why an instance was modified.
-	 * @throws InvalidAttributeException
-	 * @throws Exception
-	 * @throws InvalidAttributeValueException
 	 */
-	private void updateCOSMICDatabaseIdentifierInstance(
-		String identifierValue, GKInstance modifiedInstanceEdit
-	) throws InvalidAttributeException, Exception, InvalidAttributeValueException {
-		GKInstance cosmicDatabaseIdentifierInstance = getCosmicDatabaseIdentifierInstance();
-		// Set the identifier value.
-		cosmicDatabaseIdentifierInstance.setAttributeValue(ReactomeJavaConstants.identifier, identifierValue);
-		
-		// Add the instance edit to the modified list
-		List<GKInstance> modifications =
-			(List<GKInstance>) cosmicDatabaseIdentifierInstance.getAttributeValuesList(ReactomeJavaConstants.modified);
-		modifications.add(modifiedInstanceEdit);
-		cosmicDatabaseIdentifierInstance.setAttributeValue(ReactomeJavaConstants.modified, modifications);
-		
-		// Update the displayname after other changes (setDisplayName will generate a new value and then set it)
-		InstanceDisplayNameGenerator.setDisplayName(cosmicDatabaseIdentifierInstance);
+	private void updateCOSMICDatabaseIdentifierInstance(String identifierValue) {
+		SimpleInstance cosmicDatabaseIdentifierInstance = getCosmicDatabaseIdentifierInstance();
+		cosmicDatabaseIdentifierInstance.setAttribute(ReactomeJavaConstants.identifier, identifierValue);
+		cosmicDatabaseIdentifierInstance.setDisplayName(generateDisplayName(cosmicDatabaseIdentifierInstance));
 
-		MySQLAdaptor adaptor = (MySQLAdaptor) cosmicDatabaseIdentifierInstance.getDbAdaptor();
-		adaptor.updateInstanceAttribute(cosmicDatabaseIdentifierInstance, ReactomeJavaConstants.identifier);
-		adaptor.updateInstanceAttribute(cosmicDatabaseIdentifierInstance, ReactomeJavaConstants.modified);
-		adaptor.updateInstanceAttribute(cosmicDatabaseIdentifierInstance, ReactomeJavaConstants._displayName);
+		updateInDatabase(cosmicDatabaseIdentifierInstance);
+	}
+
+	private void updateInDatabase(SimpleInstance instance) {
+		instance.setDefaultPersonId(getPersonId());
+		curatorToolAPI.commit(instance);
 	}
 
 	private long getDbID() {
-		return getCosmicDatabaseIdentifierInstance().getDBID();
+		return getCosmicDatabaseIdentifierInstance().getDbId();
 	}
 }

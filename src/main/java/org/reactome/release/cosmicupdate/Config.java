@@ -1,19 +1,14 @@
 package org.reactome.release.cosmicupdate;
 
-import org.gk.persistence.MySQLAdaptor;
-import org.reactome.util.general.DBUtils;
-
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.Reader;
-import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 
 public class Config {
     private final Properties configProps;
-    private MySQLAdaptor dba;
 
     public Config(String configFilePath) {
         validateConfigFilePath(configFilePath);
@@ -34,14 +29,6 @@ public class Config {
 
     public boolean isTestMode() {
         return Boolean.parseBoolean(getConfigProperties().getProperty("testMode", "false"));
-    }
-
-    public MySQLAdaptor getDBA() throws SQLException {
-        if (this.dba == null) {
-            this.dba = DBUtils.getCuratorDbAdaptor(getConfigProperties());
-        }
-
-        return this.dba;
     }
 
     public List<FileConfig> getFileConfigs() {

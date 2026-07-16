@@ -10,10 +10,8 @@ import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.gk.model.GKInstance;
 import org.gk.model.ReactomeJavaConstants;
-import org.gk.persistence.MySQLAdaptor;
-import org.gk.schema.InvalidAttributeException;
+import org.reactome.curation.model.SimpleInstance;
 
 /*
  * This class contains utility methods that are to be used for updating COSMIC identifiers.
@@ -29,6 +27,9 @@ public class COSMICUpdateUtil {
 	private static final Logger logger = LogManager.getLogger();
 
 	private static Report report;
+
+	private static CuratorToolAPI curatorToolAPI = new CuratorToolAPI();
+	private static long personId;
 
 	// Private constructor to prevent instantiation of utility class
 	private COSMICUpdateUtil() {
@@ -156,12 +157,12 @@ public class COSMICUpdateUtil {
 	 * @return A map of <code>COSMICIdentifierUpdater</code>, keyed by COSMIC identifier.
 	 * @throws Exception
 	 */
-	static Map<String, List<COSMICIdentifierUpdater>> determinePrefixes(Collection<GKInstance> cosmicObjects)
+	static Map<String, List<COSMICIdentifierUpdater>> determinePrefixes(List<SimpleInstance> cosmicObjects)
 		throws Exception {
 
 		Map<String, List<COSMICIdentifierUpdater>> updates = new HashMap<>();
 
-		for (GKInstance cosmicObject : cosmicObjects) {
+		for (SimpleInstance cosmicObject : cosmicObjects) {
 			processCosmicObject(cosmicObject, updates);
 		}
 
@@ -169,17 +170,16 @@ public class COSMICUpdateUtil {
 	}
 
 	private static void processCosmicObject(
-		GKInstance cosmicObject,
+		SimpleInstance cosmicObject,
 		Map<String, List<COSMICIdentifierUpdater>> updates
 	) throws Exception {
+		String identifier = (String) cosmicObject.getAttribute(ReactomeJavaConstants.identifier);
 
-		String identifier = (String) cosmicObject.getAttributeValue(ReactomeJavaConstants.identifier);
 		COSMICIdentifierUpdater updater = new COSMICIdentifierUpdater();
 		updater.setIdentifier(identifier);
 		updater.setCosmicDatabaseIdentifierInstance(cosmicObject);
 
-		@SuppressWarnings("unchecked")
-		Collection<GKInstance> ewases = cosmicObject.getReferers(ReactomeJavaConstants.crossReference);
+		List<SimpleInstance> ewases = curatorToolAPI.getReferrers(cosmicObject, ReactomeJavaConstants.crossReference);
 
 		if (ewases == null || ewases.isEmpty()) {
 			getReport().printIdentifierWithNoReferrerRecord(identifier);
@@ -210,26 +210,21 @@ public class COSMICUpdateUtil {
 	 * @param identifier Identifier of the object being checked, used for reporting.
 	 * @param updater A COSMICIdentifierUpdater whose suggested prefix will be updated.
 	 * @param EWASes The EWASes to check. If a non-EWAS is in this list, it will be reported.
-	 * @throws InvalidAttributeException
-	 * @throws Exception
 	 */
-	private static void checkEWASes(
-		String identifier,
-		COSMICIdentifierUpdater updater,
-		Collection<GKInstance> EWASes
-	) throws InvalidAttributeException, Exception {
-
-		for (GKInstance potentialEWAS : EWASes) {
+	private static void checkEWASes(String identifier, COSMICIdentifierUpdater updater, List<SimpleInstance> EWASes) {
+		for (SimpleInstance potentialEWAS : EWASes) {
 			if (!isValidEWAS(potentialEWAS)) {
 				getReport().printNonEWASRecord(identifier, potentialEWAS.toString());
 				continue;
 			}
 
-			GKInstance refSequence = (GKInstance) potentialEWAS.getAttributeValue(ReactomeJavaConstants.referenceEntity);
+			potentialEWAS = inflate(potentialEWAS);
+			SimpleInstance refSequence = (SimpleInstance) potentialEWAS.getAttribute(ReactomeJavaConstants.referenceEntity);
+			refSequence = inflate(refSequence);
 
 			@SuppressWarnings("unchecked")
-			List<GKInstance> modResidues =
-				(List<GKInstance>) potentialEWAS.getAttributeValuesList(ReactomeJavaConstants.hasModifiedResidue);
+			List<SimpleInstance> modResidues =
+				(List<SimpleInstance>) potentialEWAS.getAttribute(ReactomeJavaConstants.hasModifiedResidue);
 
 			boolean foundMismatchedRefSequence = referenceSequenceMismatchesResidues(refSequence, modResidues);
 
@@ -245,8 +240,8 @@ public class COSMICUpdateUtil {
 		}
 	}
 
-	private static boolean isValidEWAS(GKInstance potentialEWAS) {
-		return potentialEWAS.getSchemClass().getName().equals(ReactomeJavaConstants.EntityWithAccessionedSequence);
+	private static boolean isValidEWAS(SimpleInstance potentialEWAS) {
+		return potentialEWAS.getSchemaClassName().equals(ReactomeJavaConstants.EntityWithAccessionedSequence);
 	}
 
 
@@ -257,24 +252,22 @@ public class COSMICUpdateUtil {
 	 * @param modResidues The modified residues.
 	 * @return TRUE if there is a mismatch: a mismatch is when the reference sequence DBID != the modifiedResidues'
 	 *         referenceSequence's DBID. FALSE, otherwise.
-	 * @throws InvalidAttributeException
-	 * @throws Exception
 	 */
-	private static boolean referenceSequenceMismatchesResidues(GKInstance refSequence, List<GKInstance> modResidues)
-		throws InvalidAttributeException, Exception {
+	private static boolean referenceSequenceMismatchesResidues(SimpleInstance refSequence, List<SimpleInstance> modResidues) {
 
-		long refSequenceId = refSequence.getDBID();
+		long refSequenceId = refSequence.getDbId();
 
-		for (GKInstance modResidue : modResidues) {
-			String className = modResidue.getSchemClass().getName();
+		for (SimpleInstance modResidue : modResidues) {
+			String className = modResidue.getSchemaClassName();
 
 			if (className.contains(ReactomeJavaConstants.FragmentReplacedModification) ||
 				className.contains(ReactomeJavaConstants.FragmentInsertionModification)) {
 
-				GKInstance residueRefSequence =
-					(GKInstance) modResidue.getAttributeValue(ReactomeJavaConstants.referenceSequence);
+				modResidue = inflate(modResidue);
+				SimpleInstance residueRefSequence =
+					(SimpleInstance) modResidue.getAttribute(ReactomeJavaConstants.referenceSequence);
 
-				if (!residueRefSequence.getDBID().equals(refSequenceId)) {
+				if (!residueRefSequence.getDbId().equals(refSequenceId)) {
 					return true; // Found a mismatch
 				}
 			}
@@ -284,31 +277,17 @@ public class COSMICUpdateUtil {
 
 
 	/**
-	 * Gets COSMIC identifiers from the database.
-	 * Queries the database for a ReferenceDatabase named "COSMIC" and then gets all DatabaseIdentifier objects
-	 * that refer to the COSMIC ReferenceDatabase via the referenceDatabase attribute.
-	 * This method will terminate the execution of the program if more than 1 "COSMIC" ReferenceDatabase is found.
-	 * If you plan to add more "COSMIC" ReferenceDatabase objects, this code will need to be changed to use the
-	 * <em>correct</em> "COSMIC" ReferenceDatabase.
-	 * @param adaptor
-	 * @return A Collection of DatabaseIdentifier objects.
-	 * @throws Exception
+	 * Gets COSMIC identifiers from the graph database. Specifically, all DatabaseIdentifier objects with a
+	 * ReferenceDatabase named "COSMIC"
+	 * @return A List of DatabaseIdentifier objects.
 	 */
-	static Collection<GKInstance> getCOSMICDatabaseIdentifierInstances(MySQLAdaptor adaptor)
-		throws Exception {
-		GKInstance cosmicReferenceDatabase = getCOSMICReferenceDatabaseOrThrow(adaptor);
-		
-		@SuppressWarnings("unchecked")
-		Collection<GKInstance> cosmicDatabaseIdentifierInstances = adaptor.fetchInstanceByAttribute(
-			ReactomeJavaConstants.DatabaseIdentifier,
-			ReactomeJavaConstants.referenceDatabase,
-			" = ",
-			cosmicReferenceDatabase.getDBID()
-		);
-		
-		return cosmicDatabaseIdentifierInstances;
+	static List<SimpleInstance> getCOSMICDatabaseIdentifierInstances() {
+		return curatorToolAPI.getCOSMICDatabaseIdentifiers();
 	}
-	
+
+	public static SimpleInstance inflate(SimpleInstance instance) {
+		return curatorToolAPI.inflate(instance);
+	}
 	
 	/**
 	 * Produces a report on identifiers. Report indicates old/"legacy" identifiers, suggested prefixes, new
@@ -316,7 +295,6 @@ public class COSMICUpdateUtil {
 	 * @param updaters The map of identifier updaters.
 	 */
 	public static void printIdentifierUpdateReport(Map<String, List<COSMICIdentifierUpdater>> updaters) {
-
 		for (COSMICIdentifierUpdater record : getCosmicRecords(updaters)) {
 			getReport().printIdentifierUpdateRecord(getIdentifierUpdateReportLineValues(record));
 		}
@@ -324,6 +302,14 @@ public class COSMICUpdateUtil {
 	
 	public static boolean stringStartsWithC(String s) {
 		return s.startsWith("C");
+	}
+
+	public static void setPersonId(long personId) {
+		COSMICUpdateUtil.personId = personId;
+	}
+
+	static long getPersonId() {
+		return personId;
 	}
 
 
@@ -335,7 +321,7 @@ public class COSMICUpdateUtil {
 
 	private static Object[] getIdentifierUpdateReportLineValues(COSMICIdentifierUpdater record) {
 		return Arrays.asList(
-			record.getCosmicDatabaseIdentifierInstance().getDBID(),
+			record.getCosmicDatabaseIdentifierInstance().getDbId(),
 			record.getIdentifier(),
 			record.getSuggestedPrefix(),
 			record.isValid(),
@@ -358,22 +344,6 @@ public class COSMICUpdateUtil {
 
 		String prefix = cosmicIdentifierRecord.getSuggestedPrefix();
 		return (prefix != null) ? prefix + identifier : identifier;
-	}
-
-
-	private static GKInstance getCOSMICReferenceDatabaseOrThrow(MySQLAdaptor adaptor) throws Exception {
-		@SuppressWarnings("unchecked")
-		Collection<GKInstance> cosmicReferenceDatabaseInstances = adaptor.fetchInstanceByAttribute(
-				ReactomeJavaConstants.ReferenceDatabase, ReactomeJavaConstants.name, " = ", "COSMIC");
-
-		if (cosmicReferenceDatabaseInstances.size() != 1) {
-			String errorMessage = "Wrong number of \"COSMIC\" refDBs: " + cosmicReferenceDatabaseInstances.size() +
-					" ; only 1 was expected. Cannot proceed.";
-			logger.fatal(errorMessage);
-			throw new RuntimeException(errorMessage);
-		}
-
-		return cosmicReferenceDatabaseInstances.iterator().next();
 	}
 
 	static void setReport(Report report) {

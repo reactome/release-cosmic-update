@@ -1,19 +1,18 @@
 package org.reactome.release.cosmicupdate;
 
-import java.sql.SQLException;
 import java.time.Duration;
 import java.util.*;
 import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.gk.model.GKInstance;
 import org.gk.model.ReactomeJavaConstants;
-import org.gk.persistence.MySQLAdaptor;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
-import org.reactome.release.common.database.InstanceEditUtils;
+import org.reactome.curation.model.SimpleInstance;
+
+import static org.reactome.release.cosmicupdate.COSMICUpdateUtil.setPersonId;
 
 public class Main {
 	private static final Logger logger = LogManager.getLogger();
@@ -35,7 +34,6 @@ public class Main {
 
 	private Config config;
 	private COSMICFileManager cosmicFileManager;
-	private GKInstance modifiedInstanceEdit;
 
 	public static void main(String[] args) throws Exception {
 		Main cosmicUpdateStep = new Main();
@@ -77,11 +75,11 @@ public class Main {
 			getCosmicFileManager().unzipFiles();
 
 			// Step 2: Get and filter COSMIC identifiers
-			MySQLAdaptor adaptor = getConfig().getDBA();
-			List<GKInstance> nonCOSVCosmicDatabaseIdentifierInstances =
-				getNonCOSVCosmicDatabaseIdentifierInstances(adaptor);
+			List<SimpleInstance> nonCOSVCosmicDatabaseIdentifierInstances =
+				getNonCOSVCosmicDatabaseIdentifierInstances();
 
 			// Step 3: Process and validate identifiers
+			setPersonId(config.getPersonId());
 			Map<String, List<COSMICIdentifierUpdater>> updaters =
 				COSMICUpdateUtil.determinePrefixes(nonCOSVCosmicDatabaseIdentifierInstances);
 			validateAndReportUpdates(updaters);
@@ -96,13 +94,13 @@ public class Main {
 		}
 	}
 
-	private List<GKInstance> getNonCOSVCosmicDatabaseIdentifierInstances(MySQLAdaptor adaptor) throws Exception {
-		Collection<GKInstance> cosmicDatabaseIdentifierInstances =
-			COSMICUpdateUtil.getCOSMICDatabaseIdentifierInstances(adaptor);
+	private List<SimpleInstance> getNonCOSVCosmicDatabaseIdentifierInstances() {
+		List<SimpleInstance> cosmicDatabaseIdentifierInstances =
+			COSMICUpdateUtil.getCOSMICDatabaseIdentifierInstances();
 		logger.info("{} COSMIC identifiers", cosmicDatabaseIdentifierInstances.size());
 
 		// Filter out COSV prefixes
-		List<GKInstance> filteredObjects = cosmicDatabaseIdentifierInstances.parallelStream()
+		List<SimpleInstance> filteredObjects = cosmicDatabaseIdentifierInstances.parallelStream()
 			.filter(this::isNotCOSVPrefix)
 			.collect(Collectors.toList());
 
@@ -110,9 +108,9 @@ public class Main {
 		return filteredObjects;
 	}
 
-	private boolean isNotCOSVPrefix(GKInstance instance) {
+	private boolean isNotCOSVPrefix(SimpleInstance instance) {
 		try {
-			String identifier = (String) instance.getAttributeValue(ReactomeJavaConstants.identifier);
+			String identifier = (String) instance.getAttribute(ReactomeJavaConstants.identifier);
 			return !identifier.toUpperCase().startsWith("COSV");
 		} catch (Exception e) {
 			throw new RuntimeException("Error accessing instance identifier", e);
@@ -135,7 +133,7 @@ public class Main {
 	 */
 	private void updateIdentifiers(Map<String, List<COSMICIdentifierUpdater>> updates) throws Exception {
 		for (COSMICIdentifierUpdater updater : getAllCOSMICIdentifierUpdaters(updates)) {
-			updater.updateIdentifier(getModifiedInstanceEdit());
+			updater.updateIdentifier();
 		}
 	}
 
@@ -151,18 +149,5 @@ public class Main {
 
 	private COSMICFileManager getCosmicFileManager() {
 		return this.cosmicFileManager;
-	}
-
-	private GKInstance getModifiedInstanceEdit() throws Exception {
-		if (this.modifiedInstanceEdit == null) {
-			this.modifiedInstanceEdit =
-				InstanceEditUtils.createDefaultIE(
-					getConfig().getDBA(),
-					getConfig().getPersonId(),
-					true,
-					"Identifier was automatically updated to new identifier by COSMIC Update process."
-				);
-		}
-		return this.modifiedInstanceEdit;
 	}
 }

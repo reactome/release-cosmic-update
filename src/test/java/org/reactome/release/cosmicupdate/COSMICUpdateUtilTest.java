@@ -11,18 +11,15 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.gk.model.GKInstance;
 import org.gk.model.ReactomeJavaConstants;
-import org.gk.schema.InvalidAttributeException;
-import org.gk.schema.SchemaClass;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
+import org.reactome.curation.model.SimpleInstance;
 
 public class COSMICUpdateUtilTest {
 
@@ -103,68 +100,61 @@ public class COSMICUpdateUtilTest {
 	}
 	
 	@Test
-	public void testDeterminePrefixes() throws InvalidAttributeException, IOException, Exception {
-		Collection<GKInstance> cosmicObjects = new ArrayList<>();
-		Collection<GKInstance> EWASes = new ArrayList<>();
-		List<GKInstance> mockModResidues = new ArrayList<>();
-		
-		GKInstance mockCosmicObject = Mockito.mock(GKInstance.class);
-		GKInstance mockCosmicObject2 = Mockito.mock(GKInstance.class);
-		GKInstance mockCosmicObject3 = Mockito.mock(GKInstance.class);
-		GKInstance mockEWAS = Mockito.mock(GKInstance.class);
-		GKInstance mockNonEWAS = Mockito.mock(GKInstance.class);
-		GKInstance mockRefSeq = Mockito.mock(GKInstance.class);
-		GKInstance mockRefSeq2 = Mockito.mock(GKInstance.class);
-		GKInstance mockModResidue = Mockito.mock(GKInstance.class);
-		GKInstance mockModResidue2 = Mockito.mock(GKInstance.class);
-		GKInstance mockResiduRefSeq = Mockito.mock(GKInstance.class);
-		GKInstance mockResiduRefSeq2 = Mockito.mock(GKInstance.class);
-		SchemaClass mockEWASSchemaClass = Mockito.mock(SchemaClass.class);
-		SchemaClass mockNonEWASSchemaClass = Mockito.mock(SchemaClass.class);
-		SchemaClass mockFragReplaceSchemaClass = Mockito.mock(SchemaClass.class);
-		SchemaClass mockFragInsertSchemaClass = Mockito.mock(SchemaClass.class);
+	public void testDeterminePrefixes() throws Exception {
+		List<SimpleInstance> cosmicObjects = new ArrayList<>();
+		List<SimpleInstance> EWASes = new ArrayList<>();
+		List<SimpleInstance> mockModResidues = new ArrayList<>();
+
+		CuratorToolAPI curatorToolAPI = Mockito.mock(CuratorToolAPI.class);
+		SimpleInstance mockCosmicObject = Mockito.mock(SimpleInstance.class);
+		SimpleInstance mockCosmicObject2 = Mockito.mock(SimpleInstance.class);
+		SimpleInstance mockCosmicObject3 = Mockito.mock(SimpleInstance.class);
+		SimpleInstance mockEWAS = Mockito.mock(SimpleInstance.class);
+		SimpleInstance mockNonEWAS = Mockito.mock(SimpleInstance.class);
+		SimpleInstance mockRefSeq = Mockito.mock(SimpleInstance.class);
+		SimpleInstance mockRefSeq2 = Mockito.mock(SimpleInstance.class);
+		SimpleInstance mockModResidue = Mockito.mock(SimpleInstance.class);
+		SimpleInstance mockModResidue2 = Mockito.mock(SimpleInstance.class);
+		SimpleInstance mockResiduRefSeq = Mockito.mock(SimpleInstance.class);
+		SimpleInstance mockResiduRefSeq2 = Mockito.mock(SimpleInstance.class);
 		
 		// set up mock object - will not have any EWASes
-		Mockito.when(mockCosmicObject.getAttributeValue(ReactomeJavaConstants.identifier)).thenReturn(IDENTIFIER_5678);
-		Mockito.when(mockCosmicObject2.getAttributeValue(ReactomeJavaConstants.identifier)).thenReturn(IDENTIFIER_44444);
+		Mockito.when(mockCosmicObject.getAttribute(ReactomeJavaConstants.identifier)).thenReturn(IDENTIFIER_5678);
+		Mockito.when(mockCosmicObject2.getAttribute(ReactomeJavaConstants.identifier)).thenReturn(IDENTIFIER_44444);
 		// object 3 has no EWASes
-		Mockito.when(mockCosmicObject3.getAttributeValue(ReactomeJavaConstants.crossReference)).thenReturn(null);
-		Mockito.when(mockCosmicObject3.getAttributeValue(ReactomeJavaConstants.identifier)).thenReturn(IDENTIFIER_COSM1111);
+		Mockito.when(mockCosmicObject3.getAttribute(ReactomeJavaConstants.crossReference)).thenReturn(null);
+		Mockito.when(mockCosmicObject3.getAttribute(ReactomeJavaConstants.identifier)).thenReturn(IDENTIFIER_COSM1111);
 		
 		// set up an EWAS for second mock object
-		Mockito.when(mockEWASSchemaClass.getName()).thenReturn(ReactomeJavaConstants.EntityWithAccessionedSequence);
-		Mockito.when(mockEWAS.getSchemClass()).thenReturn(mockEWASSchemaClass);
-		Mockito.when(mockRefSeq.getDBID()).thenReturn(DBID_1234);
+		Mockito.when(mockEWAS.getSchemaClassName()).thenReturn(ReactomeJavaConstants.EntityWithAccessionedSequence);
+		Mockito.when(mockRefSeq.getDbId()).thenReturn(DBID_1234);
 		// mismatch here on DBID should trigger a COSF prefix suggestion.
-		Mockito.when(mockRefSeq2.getDBID()).thenReturn(DBID_1235);
-		Mockito.when(mockEWAS.getAttributeValue(ReactomeJavaConstants.referenceEntity)).thenReturn(mockRefSeq).thenReturn(mockRefSeq2);
+		Mockito.when(mockRefSeq2.getDbId()).thenReturn(DBID_1235);
+		Mockito.when(mockEWAS.getAttribute(ReactomeJavaConstants.referenceEntity)).thenReturn(mockRefSeq).thenReturn(mockRefSeq2);
 		// need modified residues
-		Mockito.when(mockFragReplaceSchemaClass.getName()).thenReturn(ReactomeJavaConstants.FragmentReplacedModification);
-		Mockito.when(mockModResidue.getSchemClass()).thenReturn(mockFragReplaceSchemaClass);
-		Mockito.when(mockModResidue.getDBID()).thenReturn(DBID_1234);
-		Mockito.when(mockFragInsertSchemaClass.getName()).thenReturn(ReactomeJavaConstants.FragmentInsertionModification);
-		Mockito.when(mockModResidue2.getSchemClass()).thenReturn(mockFragInsertSchemaClass);
-		Mockito.when(mockModResidue2.getDBID()).thenReturn(DBID_1234);
-		Mockito.when(mockResiduRefSeq.getDBID()).thenReturn(DBID_1234);
-		Mockito.when(mockResiduRefSeq2.getDBID()).thenReturn(DBID_1234);
-		Mockito.when(mockModResidue.getAttributeValue(ReactomeJavaConstants.referenceSequence)).thenReturn(mockResiduRefSeq);
-		Mockito.when(mockModResidue2.getAttributeValue(ReactomeJavaConstants.referenceSequence)).thenReturn(mockResiduRefSeq2);
-		Mockito.when(mockEWAS.getAttributeValuesList(ReactomeJavaConstants.hasModifiedResidue)).thenReturn(mockModResidues);
+		Mockito.when(mockModResidue.getSchemaClassName()).thenReturn(ReactomeJavaConstants.FragmentReplacedModification);
+		Mockito.when(mockModResidue.getDbId()).thenReturn(DBID_1234);
+		Mockito.when(mockModResidue2.getSchemaClassName()).thenReturn(ReactomeJavaConstants.FragmentInsertionModification);
+		Mockito.when(mockModResidue2.getDbId()).thenReturn(DBID_1234);
+		Mockito.when(mockResiduRefSeq.getDbId()).thenReturn(DBID_1234);
+		Mockito.when(mockResiduRefSeq2.getDbId()).thenReturn(DBID_1234);
+		Mockito.when(mockModResidue.getAttribute(ReactomeJavaConstants.referenceSequence)).thenReturn(mockResiduRefSeq);
+		Mockito.when(mockModResidue2.getAttribute(ReactomeJavaConstants.referenceSequence)).thenReturn(mockResiduRefSeq2);
+		Mockito.when(mockEWAS.getAttribute(ReactomeJavaConstants.hasModifiedResidue)).thenReturn(mockModResidues);
 
 		mockModResidues.add(mockModResidue2);
 		mockModResidues.add(mockModResidue);
 		
 		// set up an non-EWAS
-		Mockito.when(mockNonEWASSchemaClass.getName()).thenReturn("NOT_AN_EWAS");
-		Mockito.when(mockNonEWAS.getSchemClass()).thenReturn(mockNonEWASSchemaClass);
-		
+		Mockito.when(mockNonEWAS.getSchemaClassName()).thenReturn("NOT_AN_EWAS");
+
 		// put EWAS and non-EWAS in list of EWASes
 		EWASes.add(mockNonEWAS);
 		EWASes.add(mockEWAS);
 		
 		// set up EWASes
-		Mockito.when(mockCosmicObject2.getReferers(ReactomeJavaConstants.crossReference)).thenReturn(EWASes);
-		Mockito.when(mockCosmicObject.getReferers(ReactomeJavaConstants.crossReference)).thenReturn(EWASes);
+		Mockito.when(curatorToolAPI.getReferrers(mockCosmicObject2, ReactomeJavaConstants.crossReference)).thenReturn(EWASes);
+		Mockito.when(curatorToolAPI.getReferrers(mockCosmicObject, ReactomeJavaConstants.crossReference)).thenReturn(EWASes);
 		
 		// add both mocks to list
 		cosmicObjects.add(mockCosmicObject);
