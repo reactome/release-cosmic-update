@@ -16,7 +16,10 @@ import org.springframework.data.neo4j.core.DatabaseSelectionProvider;
 import org.springframework.data.neo4j.core.transaction.Neo4jTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import javax.servlet.http.HttpServletRequest;
+import java.lang.reflect.Proxy;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -130,7 +133,7 @@ public class CuratorToolAPI {
                 pageSize,
                 Optional.of("referenceDatabase"),
                 Optional.of("equal"),
-                Optional.of("COSMIC")
+                searchKeysRequest("COSMIC")
             );
 
             if (total == null) {
@@ -141,6 +144,28 @@ public class CuratorToolAPI {
         } while (skip < total);
 
         return allCOSMICDatabaseIdentifierInstances.parallelStream().map(this::inflate).collect(Collectors.toList());
+    }
+
+    /**
+     * CurationController.searchInstances reads its search keys from the request as repeated "searchKeys"
+     * parameters (one per attribute) rather than as a method argument. Since we call the controller in-process
+     * there is no real HTTP request, so this builds a minimal stand-in that only supplies those parameters.
+     */
+    private static HttpServletRequest searchKeysRequest(String... searchKeys) {
+        return (HttpServletRequest) Proxy.newProxyInstance(
+            HttpServletRequest.class.getClassLoader(),
+            new Class<?>[]{HttpServletRequest.class},
+            (proxy, method, args) -> {
+                if (method.getName().equals("getParameterValues") && args != null && args.length == 1) {
+                    return "searchKeys".equals(args[0]) ? searchKeys.clone() : null;
+                }
+                if (method.getName().equals("toString") && method.getParameterCount() == 0) {
+                    return "SearchKeysRequest" + Arrays.toString(searchKeys);
+                }
+                throw new UnsupportedOperationException(
+                    "HttpServletRequest." + method.getName() + " is not supported by this stand-in request");
+            }
+        );
     }
 
     public SimpleInstance findDatabaseObjectByDbId(long dbId) {
