@@ -100,17 +100,17 @@ public class Main {
 	}
 
 	private List<SimpleInstance> getNonCOSVCosmicDatabaseIdentifierInstances() {
-		List<SimpleInstance> cosmicDatabaseIdentifierInstances =
+		List<SimpleInstance> cosmicDatabaseIdentifiers =
 			COSMICUpdateUtil.getCOSMICDatabaseIdentifierInstances();
-		logger.info("{} COSMIC identifiers", cosmicDatabaseIdentifierInstances.size());
+		logger.info("{} COSMIC identifiers", cosmicDatabaseIdentifiers.size());
 
 		// Filter out COSV prefixes
-		List<SimpleInstance> filteredObjects = cosmicDatabaseIdentifierInstances.parallelStream()
+		List<SimpleInstance> filteredCosmicDatabaseIdentifiers = cosmicDatabaseIdentifiers.parallelStream()
 			.filter(this::isNotCOSVPrefix)
 			.collect(Collectors.toList());
 
-		logger.info("{} filtered COSMIC identifiers", filteredObjects.size());
-		return filteredObjects;
+		logger.info("{} filtered COSMIC identifiers", filteredCosmicDatabaseIdentifiers.size());
+		return filteredCosmicDatabaseIdentifiers;
 	}
 
 	private boolean isNotCOSVPrefix(SimpleInstance instance) {

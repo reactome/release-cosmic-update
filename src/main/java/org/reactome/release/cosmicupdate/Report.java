@@ -41,9 +41,9 @@ public class Report {
         }
     }
 
-    public void printNonEWASRecord(String identifier, String instanceDisplayNameAndDbId) {
+    public void printNonEWASRecord(String identifier, String instanceDbIdLinkToCuratorTool, String instanceDisplayName) {
         try {
-            nonEWASPrinter.printRecord(identifier, instanceDisplayNameAndDbId);
+            nonEWASPrinter.printRecord(identifier, instanceDbIdLinkToCuratorTool, instanceDisplayName);
             nonEWASPrinter.flush();
         } catch (IOException e) {
             throw new RuntimeException("Unable to print non-EWAS record", e);
@@ -65,7 +65,7 @@ public class Report {
 
             nonEWASPrinter = new CSVPrinter(
                     new FileWriter(getNonEWASReportFileName()),
-                    CSVFormat.DEFAULT.withHeader("COSMIC identifier", "non-EWAS entity")
+                    CSVFormat.DEFAULT.withHeader("COSMIC identifier", "non-EWAS db id", "non-EWAS display name")
             );
 
             identifiersWithNoReferrerPrinter = new CSVPrinter(

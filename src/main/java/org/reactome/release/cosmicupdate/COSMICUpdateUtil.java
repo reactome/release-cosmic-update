@@ -214,7 +214,11 @@ public class COSMICUpdateUtil {
 	private static void checkEWASes(String identifier, COSMICIdentifierUpdater updater, List<SimpleInstance> EWASes) {
 		for (SimpleInstance potentialEWAS : EWASes) {
 			if (!isValidEWAS(potentialEWAS)) {
-				getReport().printNonEWASRecord(identifier, potentialEWAS.toString());
+				getReport().printNonEWASRecord(
+					identifier,
+					hyperLinkToCuratorTool(potentialEWAS.getDbId()),
+					potentialEWAS.getDisplayName()
+				);
 				continue;
 			}
 
@@ -325,7 +329,7 @@ public class COSMICUpdateUtil {
 
 	private static Object[] getIdentifierUpdateReportLineValues(COSMICIdentifierUpdater record) {
 		return Arrays.asList(
-			record.getCosmicDatabaseIdentifierInstance().getDbId(),
+			hyperLinkToCuratorTool(record.getCosmicDatabaseIdentifierInstance().getDbId()),
 			record.getIdentifier(),
 			record.getSuggestedPrefix(),
 			record.isValid(),
@@ -360,5 +364,11 @@ public class COSMICUpdateUtil {
 		}
 
 		return report;
+	}
+
+	private static String hyperLinkToCuratorTool(long dbId) {
+		return String.format(
+			"=hyperlink(\"https://curator.reactome.org/curatortool/schema_view/instance/%d\",\"%d\")", dbId, dbId
+		);
 	}
 }
